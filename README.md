@@ -16,15 +16,13 @@ Welcome to Semantic Note Search — your thoughts, instantly searchable. ✨
 Semantic search TUI for markdown (and .txt) notes using Sentence Transformers. vibe coded, for personal use when i was bored this afternoon. unfortunately i don't actually have a use for it, because i link my notes properly i never had trouble finding notes in the first place.
 
 ## Usage
-### install
 ```bash
-# git clone 
-cd 
+# install
+git clone meow-d/semantic-note-search
+cd semantic-note-search
 pip install -r requirements.txt
-```
 
-### run
-```bash
+# run
 python main.py /path/to/your/notes
 ```
 
