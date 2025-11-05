@@ -1,0 +1,4 @@
+textual>=0.40.0
+sentence-transformers>=2.2.0
+torch>=2.0.0
+textual[syntax]>=0.40.0
