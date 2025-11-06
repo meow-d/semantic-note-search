@@ -40,8 +40,9 @@ MIT License - feel free to use, modify, and distribute.
 
 ## Todo
 - [x] Fix loading screen display issues
+- [x] Update test to match new changes
+- [ ] nicer loading screen
 - [ ] Remove all try:imports, and just import normally
 - [ ] Different modes should have different UIs, currently all panels are displayed all at once
 - [ ] Fix item selection and scrolling
 - [ ] Fix click handling on results
-- [ ] Testing

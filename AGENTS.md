@@ -35,6 +35,9 @@
 - Try to use search MCP tools to search for documentation
 - The user may edit the files. Do NOT override the user's changes.
 
+## Critical Notes
+- **DO NOT touch the user's cache** (`cache.pkl`). The cache can take hours to build depending on the size of the note collection and the model used. Never rebuild, delete, or modify the user's existing cache file. Only create new caches for testing purposes in isolated environments.
+
 ## Issues
 - See README.md for current issues and TODO items
 

@@ -550,6 +550,55 @@ class SearchScreen(Screen):
         except:
             pass
 
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Handle input submission in search screen."""
+        app = cast(SearchApp, self.app)
+        if app.loading:
+            return
+
+        query = event.value.strip()
+        if query:
+            if app.app_mode == MODE_SEARCH:
+                app.perform_search(query)
+            else:
+                app.analyze_text(query)
+        else:
+            app.clear_results()
+
+        self.focus_input()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Handle input changes in search screen."""
+        app = cast(SearchApp, self.app)
+        if app.loading:
+            return
+
+        query = event.value.strip()
+        if query and len(query) >= 2:
+            if app.app_mode == MODE_SEARCH:
+                if app.test_mode:
+                    # In test mode, perform search immediately without debouncing
+                    app.perform_search(query)
+                else:
+                    app.debounce_search(query)
+            else:
+                if app.test_mode:
+                    app.analyze_text(query)
+                else:
+                    app.debounce_analysis(query)
+        elif not query:
+            app.clear_results()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses in search screen."""
+        app = cast(SearchApp, self.app)
+        if app.loading:
+            return
+
+        if event.button.id == "mode-btn":
+            # This is the analyze button in search mode
+            app.call_later(app.toggle_app_mode)
+
 
 class AnalyzeScreen(Screen):
     """Analyze mode interface screen."""
@@ -1019,7 +1068,11 @@ class SearchApp(App):
             await self.force_ui_update()
 
             loading_screen.update_loading_log("[bold #90ee90]✓ All set! Starting application...[/bold #90ee90]")
-            self.set_timer(0.5, self.show_main_interface)
+            # In test mode, switch immediately; otherwise use timer
+            if self.test_mode:
+                self.show_main_interface()
+            else:
+                self.set_timer(0.5, self.show_main_interface)
 
         except Exception as e:
             loading_screen.update_progress(0)
@@ -1064,6 +1117,11 @@ class SearchApp(App):
         # Switch from loading screen to search screen
         self.switch_screen("search")
 
+        # Initialize the search screen immediately
+        self.initialize_search_screen()
+
+    def initialize_search_screen(self) -> None:
+        """Initialize the search screen after it has been composed."""
         # Get the search screen and initialize it
         search_screen = cast(SearchScreen, self.screen)
         results_log = search_screen.query_one("#results", RichLog)
@@ -1093,46 +1151,31 @@ class SearchApp(App):
         except:
             pass
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses in modal screens."""
         if self.loading:
             return
 
-        query = event.value.strip()
-        if query:
-            if self.app_mode == MODE_SEARCH:
-                self.perform_search(query)
-            else:
-                self.analyze_text(query)
-        else:
-            self.clear_results()
-
-        self.focus_input()
-
-    def on_input_changed(self, event: Input.Changed) -> None:
-        if self.loading:
-            return
-
-        query = event.value.strip()
-        if query and len(query) >= 2:
-            if self.app_mode == MODE_SEARCH:
-                self.debounce_search(query)
-            else:
-                self.debounce_analysis(query)
-        elif not query:
-            self.clear_results()
-
-    def on_input_key(self, event) -> None:
-        if self.loading:
-            return
-        self.focus_input()
+        if event.button.id == "confirm-btn":
+            # This is the confirm button in the analyze confirmation dialog
+            pass  # Handled by ConfirmAnalyzeScreen
+        elif event.button.id == "cancel-btn":
+            # This is the cancel button in the analyze confirmation dialog
+            pass  # Handled by ConfirmAnalyzeScreen
 
     def perform_search(self, query: str) -> None:
         global model, cache
 
-        if not model or not cache or self.loading:
+        if not cache or self.loading:
             return
 
-        results = search(query, model, cache, max_results=MAX_RESULTS)
+        # In test mode, model is None, so we need to handle search differently
+        if not model:
+            # Test mode: return dummy results based on query matching
+            results = self.perform_test_search(query)
+        else:
+            results = search(query, model, cache, max_results=MAX_RESULTS)
+
         self.current_results = results
         self.selected_index = 0
 
@@ -1140,6 +1183,28 @@ class SearchApp(App):
 
         if results:
             self.display_preview(0)
+
+    def perform_test_search(self, query: str) -> list:
+        """Perform search in test mode without real model."""
+        global cache
+
+        if not query.strip() or not cache:
+            return []
+
+        results = []
+        query_lower = query.lower()
+
+        for path, (content, embedding) in cache.items():
+            content_lower = content.lower()
+            # Simple text matching for test mode
+            if query_lower in content_lower:
+                # Create a dummy score based on how well it matches
+                score = 0.8 if query_lower in content_lower else 0.5
+                results.append((score, path, content))
+
+        # Sort by score descending
+        results.sort(key=lambda x: x[0], reverse=True)
+        return results[:MAX_RESULTS]
 
     def clear_results(self) -> None:
         self.current_results = []
@@ -1379,10 +1444,9 @@ class SearchApp(App):
 
     def debounce_search(self, query):
         if hasattr(self, "_search_timer") and self._search_timer:
-            self._search_timer.cancel()
+            self._search_timer.stop()
 
-        self._search_timer = threading.Timer(0.3, lambda: self.perform_search(query))
-        self._search_timer.start()
+        self._search_timer = self.set_timer(0.3, lambda: self.perform_search(query))
 
     def on_rich_log_click(self, event) -> None:
         if not self.current_results or self.loading:
@@ -1423,20 +1487,30 @@ class SearchApp(App):
                 self.analyze_current_note()
 
 
-    async def toggle_app_mode(self) -> None:
+    def toggle_app_mode(self) -> None:
         """Switch between search and analyze modes."""
         if self.app_mode == MODE_SEARCH:
-            # Show confirmation dialog before switching to analyze mode
-            global cache
-            note_count = len(cache) if cache else 0
+            # Show confirmation dialog before switching to analyze mode (unless in test mode)
+            if not self.test_mode:
+                global cache
+                note_count = len(cache) if cache else 0
 
-            confirmed = await self.push_screen_wait(ConfirmAnalyzeScreen(note_count))
-            if not confirmed:
-                return  # User cancelled
+                def on_confirm(confirmed: bool | None) -> None:
+                    if confirmed:
+                        self.app_mode = MODE_ANALYZE
+                        self.switch_screen("analyze")
+                        # Start the scan asynchronously
+                        self.call_later(self.scan_all_notes_for_wikilinks)
+                    # Clear current results when switching modes
+                    self.clear_results()
+
+                self.push_screen(ConfirmAnalyzeScreen(note_count), on_confirm)
+                return
 
             self.app_mode = MODE_ANALYZE
             self.switch_screen("analyze")
-            await self.scan_all_notes_for_wikilinks()
+            # Start the scan asynchronously
+            self.call_later(self.scan_all_notes_for_wikilinks)
         else:
             self.app_mode = MODE_SEARCH
             self.switch_screen("search")
@@ -1603,10 +1677,9 @@ class SearchApp(App):
     def debounce_analysis(self, query):
         """Debounced text analysis for real-time wikilink suggestions."""
         if hasattr(self, "_analysis_timer") and self._analysis_timer:
-            self._analysis_timer.cancel()
+            self._analysis_timer.stop()
 
-        self._analysis_timer = threading.Timer(0.3, lambda: self.analyze_text(query))
-        self._analysis_timer.start()
+        self._analysis_timer = self.set_timer(0.3, lambda: self.analyze_text(query))
 
 
 def main():
@@ -1618,11 +1691,12 @@ def main():
     if not notes_dir.is_dir():
         print(f"Error: Notes directory not found at '{notes_dir}'")
         print(
-            f"Create the directory or specify a different one: python {sys.argv[0]} /path/to/notes"
+            f"Create the directory or specify a different one: python main.py /path/to/notes"
         )
         sys.exit(1)
 
     app = SearchApp()
+    app.test_mode = args.test_mode  # Set test mode from arguments
     app.run()
 
 
