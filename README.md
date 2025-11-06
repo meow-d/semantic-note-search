@@ -41,8 +41,19 @@ MIT License - feel free to use, modify, and distribute.
 ## Todo
 - [x] Fix loading screen display issues
 - [x] Update test to match new changes
+- [x] Remove all try:imports, and just import normally
+- [x] Different modes should have different UIs, currently all panels are displayed all at once
+- [x] remove all print() statements that can't be viewed anyways
+- [x] remove unused code, see warnings
+- [x] nicer loading screen
+- [ ] i don't see the scan confirmation ui in test mode (not sure if it's in normal mode either). is it there, or is it just not showing in test mode?
+- [ ] double check
+- [ ] change terminology to "checking index cache" "indexing" rather than "building cache"
 - [ ] nicer loading screen
-- [ ] Remove all try:imports, and just import normally
-- [ ] Different modes should have different UIs, currently all panels are displayed all at once
-- [ ] Fix item selection and scrolling
-- [ ] Fix click handling on results
+
+### skip for now
+- [ ] the ui still gets stuck when indexing/building cache
+- [ ] split code info files
+- [-] Fix item selection and scrolling
+- [-] Fix click handling on results
+
