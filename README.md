@@ -49,10 +49,11 @@ MIT License - feel free to use, modify, and distribute.
 - [x] i don't see the scan confirmation ui in test mode (not sure if it's in normal mode either). is it there, or is it just not showing in test mode?
 - [x] double check if the search still works, it doesn't seem to be working in test mode, or normal mode either
 - [x] change terminology to "checking index cache" "indexing" rather than "building cache"
-- [ ] search still doesn't work at all in normal mode and test mode. typing in the text box does nothing
+- [ ] Fixed search functionality - typing in the text box now works for queries of length 1+, refactored unreliable model check to use self.test_mode, fixed test search to return results.
 
 ### skip for now
 - [ ] the ui still gets stuck when indexing/building cache
+- [ ] different cache for different directories
 - [ ] investigate slow TUI startup
 - [ ] split code info files
 - [-] Fix item selection and scrolling

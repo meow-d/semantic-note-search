@@ -477,12 +477,13 @@ class SearchScreen(Screen):
                     )
 
             with Horizontal(classes="search-container"):
-                yield Input(placeholder="Enter search query...", id="search-input")
+                yield CustomInput(placeholder="Enter search query...", id="search-input")
                 yield Button("Analyze", id="mode-btn", classes="mode-button")
 
     def on_mount(self):
         """Focus the search input when the screen mounts."""
-        self.set_timer(0.1, self.focus_input)
+        self.focus_input()
+        self.set_timer(0.5, self.focus_input)
 
     def focus_input(self):
         """Focus the search input field."""
@@ -516,10 +517,9 @@ class SearchScreen(Screen):
             return
 
         query = event.value.strip()
-        if query and len(query) >= 2:
+        if query and len(query) >= 1:
             if app.app_mode == MODE_SEARCH:
                 if app.test_mode:
-                    # In test mode, perform search immediately without debouncing
                     await app.perform_search(query)
                 else:
                     app.debounce_search(query)
@@ -1120,9 +1120,7 @@ class SearchApp(App):
         if not cache or self.loading:
             return
 
-        # In test mode, model is None, so we need to handle search differently
-        if not model:
-            # Test mode: return dummy results based on query matching
+        if self.test_mode:
             results = self.perform_test_search(query)
         else:
             results = await asyncio.to_thread(search, query, model, cache, max_results=MAX_RESULTS)
@@ -1131,6 +1129,7 @@ class SearchApp(App):
         self.selected_index = 0
 
         self.display_results()
+        self.screen.refresh()
 
         if results:
             self.display_preview(0)
@@ -1150,7 +1149,7 @@ class SearchApp(App):
             # Simple text matching for test mode
             if query_lower in content_lower:
                 # Create a dummy score based on how well it matches
-                score = 0.8 if query_lower in content_lower else 0.5
+                score = 0.8
                 results.append((score, path, content))
 
         # Sort by score descending
@@ -1171,7 +1170,8 @@ class SearchApp(App):
 
     def display_results(self) -> None:
         try:
-            results_log = self.query_one("#results", RichLog)
+            results_id = "#results" if self.app_mode == MODE_SEARCH else "#analyze-results"
+            results_log = self.screen.query_one(results_id, RichLog)
             results_log.clear()
 
             if not self.current_results:
@@ -1181,7 +1181,7 @@ class SearchApp(App):
                     results_log.write("No results found")
                 return
 
-            search_input = self.query_one("#search-input", Input)
+            search_input = self.screen.query_one("#search-input", Input)
             query = search_input.value if search_input.value else ""
 
             if self.app_mode == MODE_ANALYZE:
@@ -1289,16 +1289,16 @@ class SearchApp(App):
 
     def display_preview(self, index: int) -> None:
         try:
-            preview_area = self.query_one("#preview", TextArea)
-
-            if not (0 <= index < len(self.current_results)):
-                preview_area.clear()
-                return
-
             if self.app_mode == MODE_ANALYZE:
                 analyze_screen = cast(AnalyzeScreen, self.screen)
                 analyze_screen.display_analysis_preview(index)
             else:
+                preview_area = self.screen.query_one("#preview", TextArea)
+
+                if not (0 <= index < len(self.current_results)):
+                    preview_area.clear()
+                    return
+
                 self.display_search_preview(index, preview_area)
 
         except:
