@@ -49,7 +49,7 @@ MIT License - feel free to use, modify, and distribute.
 - [x] i don't see the scan confirmation ui in test mode (not sure if it's in normal mode either). is it there, or is it just not showing in test mode?
 - [x] double check if the search still works, it doesn't seem to be working in test mode, or normal mode either
 - [x] change terminology to "checking index cache" "indexing" rather than "building cache"
-- [x] search still doesn't work at all in normal mode and test mode. typing in the text box does nothing
+- [ ] search still doesn't work at all in normal mode and test mode. typing in the text box does nothing
 
 ### skip for now
 - [ ] the ui still gets stuck when indexing/building cache

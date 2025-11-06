@@ -477,12 +477,12 @@ class SearchScreen(Screen):
                     )
 
             with Horizontal(classes="search-container"):
-                yield CustomInput(placeholder="Enter search query...", id="search-input")
+                yield Input(placeholder="Enter search query...", id="search-input")
                 yield Button("Analyze", id="mode-btn", classes="mode-button")
 
     def on_mount(self):
         """Focus the search input when the screen mounts."""
-        self.call_later(self.focus_input)
+        self.set_timer(0.1, self.focus_input)
 
     def focus_input(self):
         """Focus the search input field."""
@@ -492,7 +492,7 @@ class SearchScreen(Screen):
         except:
             pass
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle input submission in search screen."""
         app = cast(SearchApp, self.app)
         if app.loading:
@@ -501,15 +501,15 @@ class SearchScreen(Screen):
         query = event.value.strip()
         if query:
             if app.app_mode == MODE_SEARCH:
-                app.perform_search(query)
+                await app.perform_search(query)
             else:
-                app.analyze_text(query)
+                await app.analyze_text(query)
         else:
             app.clear_results()
 
         self.focus_input()
 
-    def on_input_changed(self, event: Input.Changed) -> None:
+    async def on_input_changed(self, event: Input.Changed) -> None:
         """Handle input changes in search screen."""
         app = cast(SearchApp, self.app)
         if app.loading:
@@ -520,12 +520,12 @@ class SearchScreen(Screen):
             if app.app_mode == MODE_SEARCH:
                 if app.test_mode:
                     # In test mode, perform search immediately without debouncing
-                    app.perform_search(query)
+                    await app.perform_search(query)
                 else:
                     app.debounce_search(query)
             else:
                 if app.test_mode:
-                    app.analyze_text(query)
+                    await app.analyze_text(query)
                 else:
                     app.debounce_analysis(query)
         elif not query:
@@ -1114,7 +1114,7 @@ class SearchApp(App):
             # This is the cancel button in the analyze confirmation dialog
             pass  # Handled by ConfirmAnalyzeScreen
 
-    def perform_search(self, query: str) -> None:
+    async def perform_search(self, query: str) -> None:
         global model, cache
 
         if not cache or self.loading:
@@ -1125,7 +1125,7 @@ class SearchApp(App):
             # Test mode: return dummy results based on query matching
             results = self.perform_test_search(query)
         else:
-            results = search(query, model, cache, max_results=MAX_RESULTS)
+            results = await asyncio.to_thread(search, query, model, cache, max_results=MAX_RESULTS)
 
         self.current_results = results
         self.selected_index = 0
@@ -1397,7 +1397,10 @@ class SearchApp(App):
         if hasattr(self, "_search_timer") and self._search_timer:
             self._search_timer.stop()
 
-        self._search_timer = self.set_timer(0.3, lambda: self.perform_search(query))
+        async def do_search():
+            await self.perform_search(query)
+
+        self._search_timer = self.set_timer(0.3, lambda: asyncio.create_task(do_search()))
 
     def on_rich_log_click(self, event) -> None:
         if not self.current_results or self.loading:
@@ -1588,21 +1591,24 @@ class SearchApp(App):
             self.app_mode = MODE_SEARCH
             self.display_analysis_results()
 
-    def analyze_text(self, text: str) -> None:
+    async def analyze_text(self, text: str) -> None:
         """Handle text input based on current mode."""
         if self.app_mode == MODE_SEARCH:
-            self.perform_search(text)
+            await self.perform_search(text)
         elif self.app_mode == MODE_ANALYZE:
             # In analyze mode, user input should still work for search
             # But analysis happens automatically on note selection
-            self.perform_search(text)
+            await self.perform_search(text)
 
     def debounce_analysis(self, query):
         """Debounced text analysis for real-time wikilink suggestions."""
         if hasattr(self, "_analysis_timer") and self._analysis_timer:
             self._analysis_timer.stop()
 
-        self._analysis_timer = self.set_timer(0.3, lambda: self.analyze_text(query))
+        async def do_analysis():
+            await self.analyze_text(query)
+
+        self._analysis_timer = self.set_timer(0.3, lambda: asyncio.create_task(do_analysis()))
 
 
 def main():
