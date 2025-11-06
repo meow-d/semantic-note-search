@@ -136,7 +136,7 @@ def load_cache():
         with open(CACHE_FILE, "rb") as f:
             return pickle.load(f)
     except FileNotFoundError:
-        print("Cache file not found, will build new cache.")
+        print("Index file not found, will index notes.")
         return {}
     except Exception as e:
         print(f"Error loading cache: {e}")
@@ -168,23 +168,23 @@ def load_or_build_cache(model, current_note_paths, force_rebuild=False, build_fu
         build_func = build_cache
 
     if force_rebuild:
-        print("Force rebuild requested - removing existing cache...")
+        print("Force reindex requested - removing existing index...")
         if CACHE_FILE.exists():
             CACHE_FILE.unlink()
-            print("Existing cache removed.")
+            print("Existing index removed.")
         else:
-            print("No existing cache file found to remove.")
+            print("No existing index file found to remove.")
 
-    print(f"Loading existing cache from {CACHE_FILE}...")
+    print(f"Loading existing index from {CACHE_FILE}...")
     cache = load_cache()
 
     if not cache:
-        print("No existing cache found. Building new cache from scratch...")
+        print("No existing index found. Indexing notes from scratch...")
         notes = [Path(p) for p in current_note_paths]
         print(f"Processing {len(notes)} notes for initial cache...")
-        return build_func(notes, model), "Built new cache"
+        return build_func(notes, model), "Indexed notes"
 
-    print(f"Found existing cache with {len(cache)} notes")
+    print(f"Found existing index with {len(cache)} notes")
     cached_note_paths = set(cache.keys())
     print(f"Comparing {len(current_note_paths)} current notes with {len(cached_note_paths)} cached notes...")
 
@@ -194,15 +194,15 @@ def load_or_build_cache(model, current_note_paths, force_rebuild=False, build_fu
     print(f"Found {len(new_notes)} new notes and {len(removed_notes)} removed notes")
 
     if not new_notes and not removed_notes and not force_rebuild:
-        print("Cache is up to date - no changes needed.")
+        print("Index is up to date - no changes needed.")
         return cache, "Cache up to date"
     else:
         status_parts = []
         if force_rebuild:
-            print("Force rebuilding entire cache...")
+            print("Force reindexing entire collection...")
             notes = [Path(p) for p in current_note_paths]
             cache = build_func(notes, model)
-            status_parts.append("force rebuilt")
+            status_parts.append("reindexed")
         else:
             if new_notes:
                 print(f"Adding {len(new_notes)} new notes to cache...")
@@ -482,7 +482,7 @@ class SearchScreen(Screen):
 
     def on_mount(self):
         """Focus the search input when the screen mounts."""
-        self.focus_input()
+        self.call_later(self.focus_input)
 
     def focus_input(self):
         """Focus the search input field."""
@@ -984,12 +984,12 @@ class SearchApp(App):
                 await self.force_ui_update()
 
                 # Step 3: Build/rebuild cache
-                loading_screen.update_status("Building search index...")
-                loading_screen.update_loading_log("[#f5dede]Building search index...[/#f5dede]")
+                loading_screen.update_status("Indexing notes...")
+                loading_screen.update_loading_log("[#f5dede]Indexing notes...[/#f5dede]")
                 loading_screen.update_progress(80)
                 await self.force_ui_update()
 
-                loading_screen.update_loading_log("[#f5dede]Checking existing cache...[/#f5dede]")
+                loading_screen.update_loading_log("[#f5dede]Checking existing index...[/#f5dede]")
                 await self.force_ui_update()
 
                 # Build cache asynchronously to prevent UI freezing

@@ -46,13 +46,14 @@ MIT License - feel free to use, modify, and distribute.
 - [x] remove all print() statements that can't be viewed anyways
 - [x] remove unused code, see warnings
 - [x] nicer loading screen
-- [ ] i don't see the scan confirmation ui in test mode (not sure if it's in normal mode either). is it there, or is it just not showing in test mode?
-- [ ] double check
-- [ ] change terminology to "checking index cache" "indexing" rather than "building cache"
-- [ ] nicer loading screen
+- [x] i don't see the scan confirmation ui in test mode (not sure if it's in normal mode either). is it there, or is it just not showing in test mode?
+- [x] double check if the search still works, it doesn't seem to be working in test mode, or normal mode either
+- [x] change terminology to "checking index cache" "indexing" rather than "building cache"
+- [x] search still doesn't work at all in normal mode and test mode. typing in the text box does nothing
 
 ### skip for now
 - [ ] the ui still gets stuck when indexing/building cache
+- [ ] investigate slow TUI startup
 - [ ] split code info files
 - [-] Fix item selection and scrolling
 - [-] Fix click handling on results
