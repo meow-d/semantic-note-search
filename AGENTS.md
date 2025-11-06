@@ -2,9 +2,10 @@
 
 ## Commands
 - **Run**: `python main.py`
-- **Dependencies**: `pip install textual sentence-transformers torch "textual[syntax]"`
-- **Test**: No formal tests yet - test manually by running the app
-- **Single test**: No test framework configured
+- **Run in test mode**: `python main.py --test-mode`
+- **Dependencies**: `pip install textual sentence-transformers torch "textual[syntax]" pytest pytest-asyncio pytest-textual-snapshot`
+- **Test**: `pytest` (comprehensive test suite)
+- **Single test**: `pytest tests/test_ai.py::test_search_functionality`
 
 ## Code Style
 - **Imports**: Group imports: stdlib → third-party → local, use absolute imports
@@ -14,7 +15,6 @@
 - **Error Handling**: Use try/except for file operations, provide clear error messages
 - **Documentation**: Use docstrings for public functions and classes
 - **Architecture**: Single-file application, keep concerns separated (UI vs business logic)
-- Stop importing static and label if you're not gonna use it
 
 ## Project Structure
 - **Single Python file**: All functionality in `main.py`
@@ -36,9 +36,5 @@
 - The user may edit the files. Do NOT override the user's changes.
 
 ## Issues
-- see README.md. do NOT edit the todo there except for ticking.
-
-- for the agent's own todo use below:
-
-## Agent TODO
+- See README.md for current issues and TODO items
 

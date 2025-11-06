@@ -1,0 +1,1 @@
+# Tests package for semantic note search

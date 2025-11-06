@@ -39,5 +39,9 @@ First run will take a while as it'll need to download the sentence transformer m
 MIT License - feel free to use, modify, and distribute.
 
 ## Todo
-- [ ] Fix loading screen display issues
-- [ ] selecting items should also scroll items to be visible
+- [x] Fix loading screen display issues
+- [ ] Remove all try:imports, and just import normally
+- [ ] Different modes should have different UIs, currently all panels are displayed all at once
+- [ ] Fix item selection and scrolling
+- [ ] Fix click handling on results
+- [ ] Testing

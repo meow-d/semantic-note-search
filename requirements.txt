@@ -2,3 +2,6 @@ textual>=0.40.0
 sentence-transformers>=2.2.0
 torch>=2.0.0
 textual[syntax]>=0.40.0
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-textual-snapshot>=0.4.0
