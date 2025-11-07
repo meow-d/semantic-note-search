@@ -32,20 +32,13 @@ class LoadingScreen(Screen):
             with Vertical(id="loading-content"):
                 # App title/logo
                 yield Label("🔍 Semantic Note Search", id="loading-title")
-                yield Label("Initializing your AI-powered note search...", id="loading-subtitle")
 
                 # Progress section
                 with Vertical(id="loading-progress-section"):
                     yield Label("Loading components...", id="loading-status")
                     yield ProgressBar(id="loading-progress", total=100)
-                    yield RichLog(id="loading-log", markup=True, auto_scroll=False)
 
-    def update_loading_log(self, message, clear_first=False):
-        """Update the loading log with a message."""
-        log = self.query_one("#loading-log", RichLog)
-        if clear_first:
-            log.clear()
-        log.write(message)
+
 
     def update_status(self, status: str):
         """Update the loading status text."""
@@ -487,11 +480,10 @@ class SearchApp(App):
         align: center middle;
     }
     #loading-content {
-        width: 70;
+        width: auto;
         height: auto;
-        background: #2d1414;
-        border: thick #cd5c5c;
-        padding: 3;
+        background: transparent;
+        padding: 2;
         align: center middle;
     }
     #loading-title {
@@ -518,14 +510,7 @@ class SearchApp(App):
         width: 50;
         margin: 1 0;
     }
-    #loading-log {
-        width: 100%;
-        height: 8;
-        background: #1a0d0d;
-        border: solid #8b3a3a;
-        margin-top: 2;
-        color: #cd5c5c;
-    }
+
     """
 
     SCREENS = {
@@ -572,7 +557,6 @@ class SearchApp(App):
         global model, cache
 
         loading_screen = cast(LoadingScreen, self.screen)
-        loading_screen.query_one("#loading-log", RichLog).clear()
         loading_screen.update_progress(0)
 
         try:
@@ -581,48 +565,31 @@ class SearchApp(App):
 
             # Step 0: Welcome message
             loading_screen.update_status("Initializing...")
-            loading_screen.update_loading_log("[bold #cd5c5c]Welcome to Semantic Note Search![/bold #cd5c5c]", True)
-            if self.test_mode:
-                loading_screen.update_loading_log("[yellow]TEST MODE ENABLED[/yellow]")
-            loading_screen.update_loading_log("")
             await self.force_ui_update()
 
             if not self.test_mode:
                 # Step 1: Load model
                 loading_screen.update_status("Loading AI model...")
-                loading_screen.update_loading_log("[#f5dede]Loading sentence transformer model...[/#f5dede]")
                 loading_screen.update_progress(10)
                 await self.force_ui_update()
 
                 model = load_model()
                 loading_screen.update_progress(40)
-
-                loading_screen.update_loading_log("[#90ee90]✓ Model loaded successfully[/#90ee90]", True)
                 await self.force_ui_update()
 
                 # Step 2: Scan for notes
                 loading_screen.update_status("Scanning notes...")
-                loading_screen.update_loading_log("[#f5dede]Scanning for notes...[/#f5dede]")
                 loading_screen.update_progress(50)
                 await self.force_ui_update()
 
                 current_notes = get_all_notes(self.get_notes_dir())
                 current_note_paths = {str(p) for p in current_notes}
                 loading_screen.update_progress(70)
-
-                loading_screen.update_loading_log(
-                    f"[#90ee90]✓ Found {len(current_notes)} notes in {self.get_notes_dir()}[/#90ee90]",
-                    True,
-                )
                 await self.force_ui_update()
 
                 # Step 3: Build/rebuild cache
                 loading_screen.update_status("Indexing notes...")
-                loading_screen.update_loading_log("[#f5dede]Indexing notes...[/#f5dede]")
                 loading_screen.update_progress(80)
-                await self.force_ui_update()
-
-                loading_screen.update_loading_log("[#f5dede]Checking existing index...[/#f5dede]")
                 await self.force_ui_update()
 
                 # Define progress callback for indexing
@@ -638,34 +605,24 @@ class SearchApp(App):
             else:
                 # Test mode - use dummy data
                 loading_screen.update_status("Loading test data...")
-                loading_screen.update_loading_log("[#f5dede]Loading dummy data...[/#f5dede]")
                 loading_screen.update_progress(25)
                 await self.force_ui_update()
 
                 model = None
                 cache = self.create_test_cache()
                 loading_screen.update_progress(75)
-
-                loading_screen.update_loading_log("[#90ee90]✓ Test data loaded[/#90ee90]", True)
                 await self.force_ui_update()
 
             # Step 4: Initialize interface
             loading_screen.update_status("Starting application...")
-            loading_screen.update_loading_log("[#f5dede]Initializing interface...[/#f5dede]")
             loading_screen.update_progress(100)
             await self.force_ui_update()
-
-            loading_screen.update_loading_log("[bold #90ee90]✓ Ready to search![/bold #90ee90]")
             # Switch to main interface immediately
             self.show_main_interface()
 
         except Exception as e:
             loading_screen.update_progress(0)
-            loading_screen.update_loading_log("[bold #ff6b6b]Error during initialization[/bold #ff6b6b]", True)
-            loading_screen.update_loading_log("")
-            loading_screen.update_loading_log(f"[#ff6b6b]{str(e)}[/#ff6b6b]")
-            loading_screen.update_loading_log("")
-            loading_screen.update_loading_log("[dim]Press ctrl+q to quit[/dim]")
+            loading_screen.update_status(f"Error: {str(e)}")
 
     async def force_ui_update(self) -> None:
         """Force UI update to show loading progress immediately."""

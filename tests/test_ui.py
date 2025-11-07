@@ -173,7 +173,7 @@ class TestUITextualIntegration:
         screen = LoadingScreen()
         # The test passes if the screen can be instantiated
         assert screen is not None
-        assert hasattr(screen, 'update_loading_log')
+
         assert hasattr(screen, 'update_progress')
 
     async def test_main_interface_elements_exist(self):

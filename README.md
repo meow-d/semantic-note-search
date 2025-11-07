@@ -53,22 +53,21 @@ MIT License - feel free to use, modify, and distribute.
 - [x] improve wikilink suggestion
   - [x] files cannot link to themselves
   - [x] wikilink preview should have the wikilink applied
-  - [x] wikilink preview should have the wikilink highlighted with bg color, and scrolled into view (basic scrolling implemented)
+  - [x] wikilink preview should have the wikilink highlighted with bg color, and scrolled into view (proper scrolling implemented with cursor positioning)
   - [x] double check if it ignores headings and yaml frontmatter and existing links
 
 - [x] Click should select item
 - [x] arrow keys scrolling should scroll the select item into view (need to refer to textual docs)
+- [x] split code info files
+- [x] different cache for different directories
+- [x] confirmation screen is malformed, some text pushes the box
+- [x] the ui still gets stuck when indexing/building cache
+- [x] investigate slow TUI startup
 
-### skip for now
-- [ ] more minimal, borderless startup screen, centered app title, then current progress (for which stage), detailed progress (for which file it's indexing), and a progress bar (updated with detailed progress too)
+- [x] more minimal, borderless startup screen, centered app title, then current progress (for which stage), detailed progress (for which file it's indexing), and a progress bar (updated with detailed progress too)
 - [ ] better wikilink preview
   - [ ] on the left, the preview should be compact, in two lines. first line being: 0.740 test.md (machine learning). second line being   -> ml.md (note title that you get from the first h1)
   - [ ] on the right, remove duplicate wikilink suggestions info. the first and second note should just be displayed as is, in two different panes.
-  - [ ] there's no button to switch modes back
-- [ ] the ui still gets stuck when indexing/building cache
-- [ ] different cache for different directories
-- [ ] investigate slow TUI startup
-- [ ] confirmation screen is malformed, some text pushes the box
+  - [ ] the button to switch modes back should be at the top bar. and it doesn't work at all. ensure that switching back and forth will not cause the wikilink suggestion results to be lost so the user can switch without havingt to rescan
 
-- [ ] split code info files
-
+### skip for now
