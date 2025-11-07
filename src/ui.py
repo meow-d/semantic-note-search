@@ -178,6 +178,14 @@ class AnalyzeScreen(Screen):
         except Exception as e:
             print(f"Error updating progress: {e}")
 
+    def get_note_title(self, content, filename):
+        lines = content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line.startswith('# '):
+                return line[2:].strip()
+        return Path(filename).stem
+
     def display_all_analysis_results(self) -> None:
         try:
             app = cast(SearchApp, self.app)
@@ -249,8 +257,7 @@ class AnalyzeScreen(Screen):
             pattern = re.compile(re.escape(wikilink), re.IGNORECASE)
             match = pattern.search(full_source_content)
             if match:
-                highlighted_wikilink = f"[bold #f5dede on #8b3a3a]{display_text}[/bold #f5dede on #8b3a3a]"
-                highlighted_content = full_source_content[:match.start()] + highlighted_wikilink + full_source_content[match.end():]
+                highlighted_content = full_source_content[:match.start()] + display_text + full_source_content[match.end():]
                 lines_before = full_source_content[:match.start()].count('\n')
             else:
                 highlighted_content = full_source_content
@@ -353,7 +360,7 @@ class SearchApp(App):
     Screen { background: #1a0d0d; }
     .main-container { height: 100%; }
     .top-bar {
-        height: 5;
+        height: 3;
         background: #2d1414;
         border: solid #8b3a3a;
         margin: 1 1 0 1;
@@ -463,19 +470,18 @@ class SearchApp(App):
     .mode-button {
         width: 10;
         min-width: 10;
-        margin: 0 0 0 1;
+        margin: 0;
+        padding: 0;
+        border: none;
         color: #f5dede;
         background: #8b3a3a;
-        border: solid #8b3a3a;
         text-align: center;
     }
     .mode-button:hover {
         background: #a14d4d;
-        border: solid #cd5c5c;
     }
     .mode-button:focus {
         background: #a14d4d;
-        border: solid #cd5c5c;
     }
     #results, #analyze-results {
         height: 100%;
@@ -1054,7 +1060,29 @@ class SearchApp(App):
     async def scan_all_notes_for_wikilinks(self) -> None:
         global model, cache
 
-        if not model or not cache or self.loading:
+        if not cache or self.loading:
+            return
+
+        if self.test_mode:
+            # Create dummy suggestions for test mode
+            dummy_suggestions = [
+                {
+                    'score': 0.8,
+                    'source_note': 'test1.md',
+                    'candidate': 'machine learning',
+                    'filename': 'ml_notes.md',
+                    'note_content': '# Machine Learning Notes\n\nThis note covers machine learning concepts...',
+                    'wikilink': '[[ml_notes.md|machine learning]]',
+                    'source_note_path': str(self.get_notes_dir() / 'test1.md'),
+                    'source_note_content': 'This is a test note about [[ml_notes.md|machine learning]]...'
+                }
+            ]
+            self.all_analysis_suggestions = dummy_suggestions
+            self.selected_suggestion_index = 0
+            analyze_screen = cast(AnalyzeScreen, self.screen)
+            analyze_screen.display_all_analysis_results()
+            if dummy_suggestions:
+                analyze_screen.display_analysis_preview(0)
             return
 
         try:

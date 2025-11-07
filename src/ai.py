@@ -373,8 +373,10 @@ def filter_text_for_candidates(text: str) -> str:
     return '\n'.join(filtered_lines)
 
 
-def analyze_text_for_wikilinks(text: str, model: SentenceTransformer, cache: Dict[str, Tuple[str, torch.Tensor]], nlp: Optional[Any] = None, source_note_path: Optional[str] = None) -> List[Dict[str, Any]]:
+def analyze_text_for_wikilinks(text: str, model: SentenceTransformer|None, cache: Dict[str, Tuple[str, torch.Tensor]], nlp: Optional[Any] = None, source_note_path: Optional[str] = None) -> List[Dict[str, Any]]:
     """Analyze text for wikilink candidates and return suggestions."""
+    if model is None:
+        raise Exception("no model")
     if not text.strip() or not model or not cache:
         return []
 
@@ -439,8 +441,10 @@ def analyze_text_for_wikilinks(text: str, model: SentenceTransformer, cache: Dic
         return []
 
 
-def search(query: str, model: SentenceTransformer, cache: Dict[str, Tuple[str, torch.Tensor]], score_threshold: float = SCORE_THRESHOLD, max_results: int = MAX_RESULTS) -> List[Tuple[float, str, str]]:
+def search(query: str, model: SentenceTransformer|None, cache: Dict[str, Tuple[str, torch.Tensor]], score_threshold: float = SCORE_THRESHOLD, max_results: int = MAX_RESULTS) -> List[Tuple[float, str, str]]:
     """Search for notes matching the query."""
+    if model is None:
+        raise Exception("no model")
     if not query.strip():
         return []
 
