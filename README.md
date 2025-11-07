@@ -43,8 +43,7 @@ MIT License - feel free to use, modify, and distribute.
   - [x] on the left, the preview should be compact, in two lines. first line being: 0.740 test.md (machine learning). second line being   -> ml.md (note title that you get from the first h1)
   - [x] on the right, remove duplicate wikilink suggestions info on the source note. both panels also have too many nesting and borders, causing it to look ugly.
   - [x] the wikilinks come out as [bold #f5dede on #8b3a3a][[ml_notes.md|machine learning]][/bold #f5dede on #8b3a3a], rather than rendered
-
-- [x] some failures, like incompatible cuda version causing the app to not work entirely, fail silently when it shouldn't.
+  - [x] left pane just doesn't have any info now, nothing below "Navigate with ↑↓ arrows"
 
 - [x] you STILL can't quit in the loading screen
 
@@ -55,4 +54,5 @@ MIT License - feel free to use, modify, and distribute.
 
 ### skip for now
 - [ ] type errors in ai.py
+- [ ] separate the textual css in separate file
 

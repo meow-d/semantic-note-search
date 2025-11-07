@@ -60,7 +60,7 @@ class SearchScreen(Screen):
         with Vertical(classes="main-container"):
             with Horizontal(classes="top-bar"):
                 yield Label("🔍 Semantic Search", id="mode-label")
-                yield Button("Analyze Mode", id="mode-btn", classes="mode-button")
+                yield Button("Analyze", id="mode-btn", classes="mode-button")
             
             with Horizontal(classes="content-container", id="search-layout"):
                 with Vertical(classes="search-results-panel"):
@@ -136,7 +136,7 @@ class AnalyzeScreen(Screen):
         with Vertical(classes="main-container"):
             with Horizontal(classes="top-bar"):
                 yield Label("📝 Analyze Mode", id="mode-label")
-                yield Button("Search Mode", id="mode-btn", classes="mode-button")
+                yield Button("Search", id="mode-btn", classes="mode-button")
             
             with Vertical(classes="analyze-container", id="analyze-layout"):
                 with Vertical(id="analyze-progress-section"):
@@ -149,7 +149,6 @@ class AnalyzeScreen(Screen):
                         yield RichLog(id="analyze-results", auto_scroll=False, markup=True)
                     with Vertical(classes="analyze-preview-container"):
                         with Vertical(classes="analyze-source-panel"):
-                            yield Label("Source Note", id="source-label")
                             yield TextArea(
                                 id="analyze-source",
                                 read_only=True,
@@ -157,7 +156,6 @@ class AnalyzeScreen(Screen):
                                 theme="dracula",
                             )
                         with Vertical(classes="analyze-target-panel"):
-                            yield Label("Target Note", id="target-label")
                             yield TextArea(
                                 id="analyze-target",
                                 read_only=True,
@@ -211,8 +209,6 @@ class AnalyzeScreen(Screen):
                     results_log.write(f"[#cd5c5c]{score:.3f}  {source_note} ({candidate})")
                     results_log.write(f"[dim]   -> {suggestion['filename']} ({target_title})[/dim]")
 
-                results_log.write("")
-
         except Exception as e:
             print(f"Error displaying all analysis results: {e}")
 
@@ -241,11 +237,19 @@ class AnalyzeScreen(Screen):
             wikilink = suggestion['wikilink']
             candidate = suggestion['candidate']
 
+            # Parse wikilink to get display text
             import re
-            pattern = re.compile(re.escape(candidate), re.IGNORECASE)
+            wikilink_match = re.match(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]', wikilink)
+            if wikilink_match:
+                link_target = wikilink_match.group(1)
+                display_text = wikilink_match.group(2) if wikilink_match.group(2) else link_target
+            else:
+                display_text = candidate
+
+            pattern = re.compile(re.escape(wikilink), re.IGNORECASE)
             match = pattern.search(full_source_content)
             if match:
-                highlighted_wikilink = f"[bold #f5dede on #8b3a3a]{candidate}[/bold #f5dede on #8b3a3a]"
+                highlighted_wikilink = f"[bold #f5dede on #8b3a3a]{display_text}[/bold #f5dede on #8b3a3a]"
                 highlighted_content = full_source_content[:match.start()] + highlighted_wikilink + full_source_content[match.end():]
                 lines_before = full_source_content[:match.start()].count('\n')
             else:
@@ -312,7 +316,7 @@ class ConfirmAnalyzeScreen(ModalScreen[bool]):
 
     CSS = """
     #confirm-dialog {
-        width: 70;
+        width: 80;
         height: auto;
         border: thick $primary;
         background: $surface;
@@ -349,7 +353,7 @@ class SearchApp(App):
     Screen { background: #1a0d0d; }
     .main-container { height: 100%; }
     .top-bar {
-        height: 4;
+        height: 5;
         background: #2d1414;
         border: solid #8b3a3a;
         margin: 1 1 0 1;
@@ -404,26 +408,22 @@ class SearchApp(App):
     }
     .analyze-suggestions-panel {
         width: 1fr;
-        border: solid #8b3a3a;
         margin: 0 1 0 1;
         background: #2d1414;
     }
     .analyze-preview-container {
         width: 1fr;
         height: 1fr;
-        border: solid #cd5c5c;
         margin: 0 1 0 0;
         background: #2d1414;
     }
     .analyze-source-panel {
         height: 1fr;
-        border: solid #8b3a3a;
         margin: 0 0 1 0;
         background: #2d1414;
     }
     .analyze-target-panel {
         height: 1fr;
-        border: solid #8b3a3a;
         margin: 1 0 0 0;
         background: #2d1414;
     }
@@ -461,9 +461,8 @@ class SearchApp(App):
         border: solid #cd5c5c;
     }
     .mode-button {
-        width: 12;
-        min-width: 12;
-        height: 4;
+        width: 10;
+        min-width: 10;
         margin: 0 0 0 1;
         color: #f5dede;
         background: #8b3a3a;
@@ -478,7 +477,7 @@ class SearchApp(App):
         background: #a14d4d;
         border: solid #cd5c5c;
     }
-    #results {
+    #results, #analyze-results {
         height: 100%;
         scrollbar-size: 1 1;
         color: #f5dede;
@@ -688,8 +687,6 @@ class SearchApp(App):
         results_log.clear()
 
         cache_size = len(cache) if cache else 0
-        results_log.write(f"[dim]Debug: cache_size={cache_size}, cache_exists={cache is not None}[/dim]")
-        results_log.write("")
         
         if cache and len(cache) > 0:
             results_log.write(
@@ -1212,9 +1209,9 @@ class SearchApp(App):
         try:
             mode_button = self.screen.query_one("#mode-btn", Button)
             if self.app_mode == MODE_SEARCH:
-                mode_button.label = "Analyze Mode"
+                mode_button.label = "Analyze"
             else:
-                mode_button.label = "Search Mode"
+                mode_button.label = "Search"
         except:
             pass
 
