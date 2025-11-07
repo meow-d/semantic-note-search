@@ -4,6 +4,10 @@ import asyncio
 import os
 import pickle
 from pathlib import Path
+from typing import Dict, List, Tuple, Optional, Any, Set, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import torch
 
 import torch
 from sentence_transformers import SentenceTransformer, util
@@ -15,11 +19,11 @@ from config import (
 )
 
 
-model = None
-cache = None
+model: Optional[SentenceTransformer] = None
+cache: Optional[Dict[str, Tuple[str, torch.Tensor]]] = None
 
 
-def get_gpu_status():
+def get_gpu_status() -> Dict[str, Any]:
     """Check GPU availability and return status info."""
     status_info = {
         'available': False,
@@ -47,14 +51,14 @@ def get_gpu_status():
                 status_info['available'] = True
                 status_info['device'] = "opencl"
                 status_info['device_name'] = "OpenCL GPU"
-    except Exception as e:
+    except Exception:
         # If any error occurs during detection, fall back to CPU
         pass
     
     return status_info
 
 
-def load_model():
+def load_model() -> Optional[SentenceTransformer]:
     """Load the sentence transformer model."""
     global model
     
@@ -81,7 +85,7 @@ def load_model():
         return model
 
 
-def get_all_notes(directory):
+def get_all_notes(directory: Path) -> List[Path]:
     """Get all note files from the directory."""
     if not directory.is_dir():
         raise SystemExit(1)
@@ -94,7 +98,7 @@ def get_all_notes(directory):
     return notes
 
 
-async def build_cache(notes, model, cache_file, progress_callback=None):
+async def build_cache(notes: List[Path], model: SentenceTransformer, cache_file: Path, progress_callback: Optional[Any] = None) -> Dict[str, Tuple[str, torch.Tensor]]:
     """Build the search cache for notes."""
     global cache
     cache = {}
@@ -107,7 +111,7 @@ async def build_cache(notes, model, cache_file, progress_callback=None):
             if content.strip():
                 embedding = model.encode(QUERY_INSTRUCTION + content, convert_to_tensor=True, device=next(model.parameters()).device)
                 cache[str(note_path)] = (content, embedding)
-        except Exception as e:
+        except Exception:
             # Skip problematic notes but continue processing
             pass
 
@@ -129,18 +133,18 @@ async def build_cache(notes, model, cache_file, progress_callback=None):
     return cache
 
 
-def load_cache(cache_file):
+def load_cache(cache_file: Path) -> Dict[str, Tuple[str, torch.Tensor]]:
     """Load the search cache from file."""
     try:
         with open(cache_file, "rb") as f:
             return pickle.load(f)
     except FileNotFoundError:
         return {}
-    except Exception as e:
+    except Exception:
         return {}
 
 
-async def update_cache_for_new_notes(model, existing_cache, new_notes, progress_callback=None):
+async def update_cache_for_new_notes(model: SentenceTransformer, existing_cache: Dict[str, Tuple[str, torch.Tensor]], new_notes: Set[str], progress_callback: Optional[Any] = None) -> Dict[str, Tuple[str, torch.Tensor]]:
     """Update cache with new notes."""
     global cache
     total = len(new_notes)
@@ -152,7 +156,7 @@ async def update_cache_for_new_notes(model, existing_cache, new_notes, progress_
                 embedding = model.encode(QUERY_INSTRUCTION + content, convert_to_tensor=True, device=next(model.parameters()).device)
                 cache[str(note_path)] = (content, embedding)
                 existing_cache[str(note_path)] = (content, embedding)
-        except Exception as e:
+        except Exception:
             # Skip problematic notes but continue processing
             pass
 
@@ -163,7 +167,7 @@ async def update_cache_for_new_notes(model, existing_cache, new_notes, progress_
     return existing_cache
 
 
-def remove_deleted_notes_from_cache(existing_cache, removed_notes):
+def remove_deleted_notes_from_cache(existing_cache: Dict[str, Tuple[str, torch.Tensor]], removed_notes: Set[str]) -> Dict[str, Tuple[str, torch.Tensor]]:
     """Remove deleted notes from cache."""
     global cache
     for path in removed_notes:
@@ -172,7 +176,7 @@ def remove_deleted_notes_from_cache(existing_cache, removed_notes):
     return existing_cache
 
 
-async def load_or_build_cache(model, current_note_paths, notes_dir, force_rebuild=False, build_func=None, progress_callback=None):
+async def load_or_build_cache(model: Optional[SentenceTransformer], current_note_paths: Set[str], notes_dir: Path, force_rebuild: bool = False, build_func: Optional[Any] = None, progress_callback: Optional[Any] = None) -> Tuple[Dict[str, Tuple[str, torch.Tensor]], str]:
     """Load or build cache and return status information."""
     global cache
     if build_func is None:
@@ -230,14 +234,14 @@ async def load_or_build_cache(model, current_note_paths, notes_dir, force_rebuil
         try:
             with open(cache_file, "wb") as f:
                 pickle.dump(cpu_cache, f)
-        except Exception as e:
+        except Exception:
             # If saving fails, continue but log the error
             pass
 
         return cache, f"Updated cache: {', '.join(status_parts)}"
 
 
-def load_spacy_model():
+def load_spacy_model() -> Optional[Any]:
     """Load spaCy model with fallback handling."""
     if spacy is None:
         print("Warning: spaCy not available. Install with: pip install spacy")
@@ -249,15 +253,24 @@ def load_spacy_model():
         print("✓ spaCy model loaded successfully")
         return nlp
     except OSError:
-        print("Warning: spaCy English model not found.")
-        print("Please install with: python -m spacy download en_core_web_sm")
-        return None
+        print("spaCy English model not found. Attempting to download...")
+        try:
+            from spacy.cli import download
+            download("en_core_web_sm")
+            print("✓ spaCy model downloaded successfully")
+            # Now try loading again
+            nlp = spacy.load("en_core_web_sm")
+            print("✓ spaCy model loaded successfully")
+            return nlp
+        except Exception as e:
+            print(f"Error downloading spaCy model: {e}")
+            return None
     except Exception as e:
         print(f"Warning: Could not load spaCy model: {e}")
         return None
 
 
-def extract_noun_phrases(text, nlp):
+def extract_noun_phrases(text: str, nlp: Optional[Any]) -> List[str]:
     """Extract noun phrases from text using spaCy."""
     if not nlp:
         return []
@@ -277,7 +290,7 @@ def extract_noun_phrases(text, nlp):
         return []
 
 
-def extract_verb_phrases(text, nlp):
+def extract_verb_phrases(text: str, nlp: Optional[Any]) -> List[str]:
     """Extract verb phrases from text using spaCy, excluding trivial verbs."""
     if not nlp:
         return []
@@ -314,7 +327,7 @@ def extract_verb_phrases(text, nlp):
         return []
 
 
-def combine_and_deduplicate_candidates(noun_phrases, verb_phrases):
+def combine_and_deduplicate_candidates(noun_phrases: List[str], verb_phrases: List[str]) -> List[str]:
     """Combine noun and verb phrases and remove duplicates."""
     all_candidates = noun_phrases + verb_phrases
 
@@ -331,7 +344,7 @@ def combine_and_deduplicate_candidates(noun_phrases, verb_phrases):
     return unique_candidates
 
 
-def filter_text_for_candidates(text):
+def filter_text_for_candidates(text: str) -> str:
     """Filter text to exclude headings, yaml frontmatter, and existing wikilinks."""
     lines = text.split('\n')
     filtered_lines = []
@@ -360,7 +373,7 @@ def filter_text_for_candidates(text):
     return '\n'.join(filtered_lines)
 
 
-def analyze_text_for_wikilinks(text, model, cache, nlp=None, source_note_path=None):
+def analyze_text_for_wikilinks(text: str, model: SentenceTransformer, cache: Dict[str, Tuple[str, torch.Tensor]], nlp: Optional[Any] = None, source_note_path: Optional[str] = None) -> List[Dict[str, Any]]:
     """Analyze text for wikilink candidates and return suggestions."""
     if not text.strip() or not model or not cache:
         return []
@@ -422,11 +435,11 @@ def analyze_text_for_wikilinks(text, model, cache, nlp=None, source_note_path=No
 
         return wikilink_suggestions
 
-    except Exception as e:
+    except Exception:
         return []
 
 
-def search(query, model, cache, score_threshold=SCORE_THRESHOLD, max_results=MAX_RESULTS):
+def search(query: str, model: SentenceTransformer, cache: Dict[str, Tuple[str, torch.Tensor]], score_threshold: float = SCORE_THRESHOLD, max_results: int = MAX_RESULTS) -> List[Tuple[float, str, str]]:
     """Search for notes matching the query."""
     if not query.strip():
         return []

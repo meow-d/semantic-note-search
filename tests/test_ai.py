@@ -42,11 +42,17 @@ class TestModelLoading:
 
         result = load_model()
 
-        mock_sentence_transformer.assert_called_once_with(MODEL_NAME, trust_remote_code=True, device='cpu')
+        # Check that device was passed (could be cpu or cuda depending on GPU availability)
+        mock_sentence_transformer.assert_called_once()
+        call_args = mock_sentence_transformer.call_args
+        assert call_args.args[0] == MODEL_NAME
+        assert call_args.kwargs['trust_remote_code'] is True
+        assert 'device' in call_args.kwargs
+        
         assert result == mock_model
-        # Check that CPU message was printed
+        # Check that device message was printed
         print_calls = [call.args[0] for call in mock_print.call_args_list]
-        assert any("CPU for model encoding" in msg for msg in print_calls)
+        assert any("for model encoding" in msg for msg in print_calls)
 
     @patch('ai.SentenceTransformer')
     @patch('builtins.print')
@@ -57,9 +63,9 @@ class TestModelLoading:
 
         load_model()
 
-        # Check that CPU message was printed
+        # Check that device message was printed (could be CPU or GPU)
         print_calls = [call.args[0] for call in mock_print.call_args_list]
-        assert any("CPU for model encoding" in msg for msg in print_calls)
+        assert any("for model encoding" in msg for msg in print_calls)
 
 
 class TestCacheOperations:

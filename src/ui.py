@@ -15,7 +15,6 @@ from ai import model, cache, load_model, get_all_notes, load_or_build_cache, ana
 
 
 class CustomInput(Input):
-    """Custom input widget with additional key bindings."""
     BINDINGS = [
         Binding("ctrl+a", "select_all", "Select all"),
         Binding("ctrl+backspace", "delete_left_word", "Delete previous word"),
@@ -25,8 +24,6 @@ class CustomInput(Input):
 
 
 class LoadingScreen(Screen):
-    """Loading screen shown during app initialization."""
-
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("escape", "quit", "Quit"),
@@ -36,11 +33,8 @@ class LoadingScreen(Screen):
     def compose(self) -> ComposeResult:
         with Container(id="loading-screen"):
             with Vertical(id="loading-content"):
-                # App title/logo
                 yield Label("🔍 Semantic Note Search", id="loading-title")
-                yield Label("", id="loading-subtitle")  # For GPU status
-
-                # Progress section
+                yield Label("", id="loading-subtitle")
                 with Vertical(id="loading-progress-section"):
                     yield Label("Loading components...", id="loading-status")
                     yield ProgressBar(id="loading-progress", total=100)
@@ -48,32 +42,26 @@ class LoadingScreen(Screen):
 
 
     def update_status(self, status: str):
-        """Update the loading status text."""
-        status_label = self.query_one("#loading-status", Label)
-        status_label.update(status)
+        self.query_one("#loading-status", Label).update(status)
 
     def update_subtitle(self, subtitle: str):
-        """Update the loading subtitle text (for GPU status)."""
-        subtitle_label = self.query_one("#loading-subtitle", Label)
-        subtitle_label.update(subtitle)
+        self.query_one("#loading-subtitle", Label).update(subtitle)
 
     def update_progress(self, progress: int):
-        """Update the loading progress bar."""
-        progress_bar = self.query_one("#loading-progress", ProgressBar)
-        progress_bar.progress = progress
+        self.query_one("#loading-progress", ProgressBar).progress = progress
+
+    def action_quit(self) -> None:
+        self.app.exit()
 
 
 class SearchScreen(Screen):
-    """Main search interface screen."""
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="main-container"):
-            # Top bar with mode switching
             with Horizontal(classes="top-bar"):
                 yield Label("🔍 Semantic Search", id="mode-label")
                 yield Button("Analyze Mode", id="mode-btn", classes="mode-button")
             
-            # Search Mode Layout (2-pane)
             with Horizontal(classes="content-container", id="search-layout"):
                 with Vertical(classes="search-results-panel"):
                     yield RichLog(id="results", auto_scroll=False, markup=True)
@@ -89,19 +77,15 @@ class SearchScreen(Screen):
                 yield CustomInput(placeholder="Enter search query...", id="search-input")
 
     def on_mount(self):
-        """Focus the search input when the screen mounts."""
         self.focus_input()
 
     def focus_input(self):
-        """Focus the search input field."""
         try:
-            search_input = self.query_one("#search-input", Input)
-            search_input.focus()
+            self.query_one("#search-input", Input).focus()
         except:
             pass
 
     async def on_input_submitted(self, event) -> None:
-        """Handle input submission in search screen."""
         app = cast(SearchApp, self.app)
         if app.loading:
             return
@@ -118,7 +102,6 @@ class SearchScreen(Screen):
         self.focus_input()
 
     async def on_input_changed(self, event) -> None:
-        """Handle input changes in search screen."""
         app = cast(SearchApp, self.app)
         if app.loading:
             return
@@ -139,40 +122,32 @@ class SearchScreen(Screen):
             app.clear_results()
 
     def on_button_pressed(self, event) -> None:
-        """Handle button presses in search screen."""
         app = cast(SearchApp, self.app)
         if app.loading:
             return
 
         if event.button.id == "mode-btn":
-            # This is the analyze button in search mode
             app.call_later(app.toggle_app_mode)
 
 
 class AnalyzeScreen(Screen):
-    """Analyze mode interface screen."""
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="main-container"):
-            # Top bar with mode switching
             with Horizontal(classes="top-bar"):
                 yield Label("📝 Analyze Mode", id="mode-label")
                 yield Button("Search Mode", id="mode-btn", classes="mode-button")
             
-            # Analyze Mode Layout (no search bar, different UI)
             with Vertical(classes="analyze-container", id="analyze-layout"):
-                # Progress section
                 with Vertical(id="analyze-progress-section"):
                     yield Label("Scan Progress", id="progress-label")
                     yield ProgressBar(id="analyze-progress", total=100)
                     yield Label("Ready to scan...", id="progress-status")
 
-                # Main content
                 with Horizontal(classes="analyze-main-content"):
                     with Vertical(classes="analyze-suggestions-panel"):
                         yield RichLog(id="analyze-results", auto_scroll=False, markup=True)
                     with Vertical(classes="analyze-preview-container"):
-                        # Two panes for source and target notes
                         with Vertical(classes="analyze-source-panel"):
                             yield Label("Source Note", id="source-label")
                             yield TextArea(
@@ -190,19 +165,22 @@ class AnalyzeScreen(Screen):
                                 theme="dracula",
                             )
 
-    def update_progress(self, percentage: int, status: str):
-        """Update the progress bar and status text."""
-        try:
-            progress_bar = self.query_one("#analyze-progress", ProgressBar)
-            progress_bar.progress = percentage
+    def on_button_pressed(self, event) -> None:
+        app = cast(SearchApp, self.app)
+        if app.loading:
+            return
 
-            status_label = self.query_one("#progress-status", Label)
-            status_label.update(status)
+        if event.button.id == "mode-btn":
+            app.call_later(app.toggle_app_mode)
+
+    def update_progress(self, percentage: int, status: str):
+        try:
+            self.query_one("#analyze-progress", ProgressBar).progress = percentage
+            self.query_one("#progress-status", Label).update(status)
         except Exception as e:
             print(f"Error updating progress: {e}")
 
     def display_all_analysis_results(self) -> None:
-        """Display ALL wikilink suggestions from all notes."""
         try:
             app = cast(SearchApp, self.app)
             results_log = self.query_one("#analyze-results", RichLog)
@@ -219,23 +197,19 @@ class AnalyzeScreen(Screen):
             results_log.write("[dim]Navigate with ↑↓ arrows[/dim]")
             results_log.write("")
 
-            # Display ALL wikilink suggestions
             for i, suggestion in enumerate(app.all_analysis_suggestions):
                 score = suggestion['score']
                 source_note = suggestion['source_note']
-                wikilink = suggestion['wikilink']
                 candidate = suggestion['candidate']
-
+                target_title = self.get_note_title(suggestion['note_content'], suggestion['filename'])
                 is_selected = i == app.selected_suggestion_index
 
                 if is_selected:
-                    results_log.write(f"[bold #f5dede on #5d2828]{score:.3f}  {wikilink}[/]")
-                    results_log.write(f"[#f5dede on #5d2828]   From: {source_note}[/]")
-                    results_log.write(f"[#f5dede on #5d2828]   Candidate: {candidate}[/]")
+                    results_log.write(f"[bold #f5dede on #5d2828]{score:.3f}  {source_note} ({candidate})[/]")
+                    results_log.write(f"[#f5dede on #5d2828]   -> {suggestion['filename']} ({target_title})[/]")
                 else:
-                    results_log.write(f"[#cd5c5c]{score:.3f}  {wikilink}")
-                    results_log.write(f"[dim]   From: {source_note}[/dim]")
-                    results_log.write(f"[dim]   Candidate: {candidate}[/dim]")
+                    results_log.write(f"[#cd5c5c]{score:.3f}  {source_note} ({candidate})")
+                    results_log.write(f"[dim]   -> {suggestion['filename']} ({target_title})[/dim]")
 
                 results_log.write("")
 
@@ -243,7 +217,6 @@ class AnalyzeScreen(Screen):
             print(f"Error displaying all analysis results: {e}")
 
     def display_analysis_preview(self, index: int) -> None:
-        """Display preview for selected wikilink suggestion in two panes."""
         try:
             app = cast(SearchApp, self.app)
             source_area = self.query_one("#analyze-source", TextArea)
@@ -257,48 +230,34 @@ class AnalyzeScreen(Screen):
                 return
 
             suggestion = app.all_analysis_suggestions[index]
-
-            # Get full source note content
             source_note_path = suggestion['source_note_path']
+            
             global cache
             if cache and source_note_path in cache:
                 full_source_content = cache[source_note_path][0]
             else:
                 full_source_content = suggestion['source_note_content']
 
-            # Apply wikilink to the source content
             wikilink = suggestion['wikilink']
             candidate = suggestion['candidate']
 
-            # Find the first occurrence of the candidate (case-insensitive)
             import re
             pattern = re.compile(re.escape(candidate), re.IGNORECASE)
             match = pattern.search(full_source_content)
             if match:
-                # Replace the candidate with the highlighted wikilink
-                highlighted_wikilink = f"[bold #f5dede on #8b3a3a]{wikilink}[/bold #f5dede on #8b3a3a]"
+                highlighted_wikilink = f"[bold #f5dede on #8b3a3a]{candidate}[/bold #f5dede on #8b3a3a]"
                 highlighted_content = full_source_content[:match.start()] + highlighted_wikilink + full_source_content[match.end():]
-                # Calculate line number for scrolling
                 lines_before = full_source_content[:match.start()].count('\n')
             else:
-                # If no exact match, show original content
                 highlighted_content = full_source_content
                 lines_before = 0
 
-            # Source pane content
-            source_content = f"Source: {suggestion['source_note']}\n"
-            source_content += f"Score: {suggestion['score']:.4f}\n"
-            source_content += f"Candidate: {candidate}\n"
-            source_content += f"Suggested: {wikilink}\n"
-            source_content += "-" * 40 + "\n\n"
-            source_content += highlighted_content
+            source_content = highlighted_content
 
             source_area.load_text(source_content)
 
-            # Target pane content - find and show the linked note
             linked_filename = suggestion['filename']
-            target_content = f"Target: {linked_filename}\n"
-            target_content += "-" * 40 + "\n\n"
+            target_content = ""
 
             if cache:
                 linked_note_path = None
@@ -317,9 +276,8 @@ class AnalyzeScreen(Screen):
 
             target_area.load_text(target_content)
 
-            # Scroll to show the wikilink in source pane
             if match:
-                source_area.move_cursor((lines_before + 5, 0))  # +5 to account for header
+                source_area.move_cursor((lines_before + 5, 0))
                 source_area.scroll_cursor_visible()
             else:
                 source_area.scroll_home()
@@ -331,15 +289,13 @@ class AnalyzeScreen(Screen):
 
 
 class ConfirmAnalyzeScreen(ModalScreen[bool]):
-    """Confirmation screen for starting analyze mode scan."""
-
     def __init__(self, note_count: int):
         super().__init__()
         self.note_count = note_count
 
     def compose(self) -> ComposeResult:
         with Vertical(id="confirm-dialog"):
-            yield Label(f"⚠️  Analyze Mode Scan Confirmation", id="confirm-title")
+            yield Label(f"Warning: Analyze Mode Scan Confirmation", id="confirm-title")
             yield Label("")
             yield Label(f"This will scan {self.note_count} notes for wikilink suggestions.", id="confirm-message")
             yield Label("This process may take several minutes depending on the number of notes.", id="confirm-warning")
@@ -388,13 +344,12 @@ class ConfirmAnalyzeScreen(ModalScreen[bool]):
 
 
 class SearchApp(App):
-    """Main application for semantic note search."""
 
     CSS = """
     Screen { background: #1a0d0d; }
     .main-container { height: 100%; }
     .top-bar {
-        height: 3;
+        height: 4;
         background: #2d1414;
         border: solid #8b3a3a;
         margin: 1 1 0 1;
@@ -508,7 +463,7 @@ class SearchApp(App):
     .mode-button {
         width: 12;
         min-width: 12;
-        height: 3;
+        height: 4;
         margin: 0 0 0 1;
         color: #f5dede;
         background: #8b3a3a;
@@ -597,48 +552,38 @@ class SearchApp(App):
         self.loading = True
         self._search_timer = None
         self.app_mode = MODE_SEARCH
-        self.all_analysis_suggestions = []  # Store ALL suggestions for analyze mode
+        self.all_analysis_suggestions = []
         self.test_mode = False
-        self.notes_dir = None  # Will be set from main.py
+        self._notes_dir: Path | None = None
 
     def compose(self) -> ComposeResult:
-        # The app uses separate screens now, so compose is minimal
         return
-        yield  # Make it a generator function
+        yield
 
     def on_mount(self) -> None:
-        # Start with loading screen
         self.push_screen("loading")
-        # Start initialization immediately with a small delay to ensure UI is ready
         self.set_timer(0.05, self.start_async_initialization)
 
     def start_async_initialization(self) -> None:
-        """Start the async initialization process."""
-        # Use Textual's call_later to run async code
         self.call_later(self.initialize_app_async)
 
     async def initialize_app_async(self) -> None:
-        """Initialize the application asynchronously."""
         global model, cache
 
         loading_screen = cast(LoadingScreen, self.screen)
         loading_screen.update_progress(0)
 
         try:
-            # Parse arguments for both modes
             args = self.parse_arguments()
 
-            # Step 0: Welcome message
             loading_screen.update_status("Initializing...")
             await self.force_ui_update()
 
             if not self.test_mode:
-                # Step 1: Check GPU status and load model
                 loading_screen.update_status("Checking GPU availability...")
                 loading_screen.update_progress(5)
                 await self.force_ui_update()
                 
-                # Get GPU status and display it
                 from ai import get_gpu_status
                 gpu_status = get_gpu_status()
                 
@@ -656,10 +601,11 @@ class SearchApp(App):
                 await self.force_ui_update()
 
                 model = load_model()
+                if model is None:
+                    raise Exception("Failed to load AI model. Please check your installation and try again.")
                 loading_screen.update_progress(40)
                 await self.force_ui_update()
 
-                # Step 2: Scan for notes
                 loading_screen.update_status("Scanning notes...")
                 loading_screen.update_progress(50)
                 await self.force_ui_update()
@@ -670,42 +616,34 @@ class SearchApp(App):
                 loading_screen.update_progress(70)
                 await self.force_ui_update()
 
-                # Step 3: Build/rebuild cache
                 loading_screen.update_status("Indexing notes...")
                 loading_screen.update_progress(80)
                 await self.force_ui_update()
 
-                # Define progress callback for indexing
                 def progress_callback(progress, status):
                     loading_screen.update_progress(progress)
                     loading_screen.update_status(status)
 
-                # Build cache asynchronously with progress updates
                 import ai
                 ai_cache, cache_status = await load_or_build_cache(
                     model, current_note_paths, self.get_notes_dir(), args.rebuild_cache, progress_callback=progress_callback
                 )
-                # Update global cache variable with the returned cache
                 cache = ai_cache
                 loading_screen.update_progress(95)
             else:
-                # Test mode - use dummy data
                 loading_screen.update_status("Loading test data...")
                 loading_screen.update_progress(25)
                 await self.force_ui_update()
 
                 model = None
-                # Update global cache in ai.py
                 import ai
                 ai.cache = self.create_test_cache()
                 loading_screen.update_progress(75)
                 await self.force_ui_update()
 
-            # Step 4: Initialize interface
             loading_screen.update_status("Starting application...")
             loading_screen.update_progress(100)
             await self.force_ui_update()
-            # Switch to main interface immediately
             self.show_main_interface()
 
         except Exception as e:
@@ -713,22 +651,16 @@ class SearchApp(App):
             loading_screen.update_status(f"Error: {str(e)}")
 
     async def force_ui_update(self) -> None:
-        """Force UI update to show loading progress immediately."""
-        # Use a very short timer to allow UI to refresh
         await asyncio.sleep(0.01)
 
     def create_test_cache(self):
-        """Create dummy cache data for testing using actual test files."""
         import torch
         from ai import get_all_notes
         
-        # Get actual test files
         notes_dir = self.get_notes_dir()
         actual_notes = get_all_notes(notes_dir)
-        
         dummy_cache = {}
 
-        # Create dummy content for each actual note file
         for note_path in actual_notes:
             if note_path.name == "test1.md":
                 content = "# Test Note 1\n\nThis is a test note about machine learning and artificial intelligence. It covers topics like neural networks, deep learning, and natural language processing."
@@ -739,37 +671,22 @@ class SearchApp(App):
             else:
                 content = f"# {note_path.stem}\n\nThis is a test note."
             
-            # Create dummy embedding (random tensor)
-            dummy_embedding = torch.randn(768)  # BGE-base-en-v1.5 has 768 dimensions
+            dummy_embedding = torch.randn(768)
             dummy_cache[str(note_path)] = (content, dummy_embedding)
 
         return dummy_cache
 
-    def update_loading_log(self, log, message, clear_first=False):
-        if clear_first:
-            log.clear()
-        log.write(message)
-
     def show_main_interface(self) -> None:
         self.loading = False
-
-        # Switch from loading screen to search screen
         self.switch_screen("search")
-
-        # Initialize the search screen immediately
         self.initialize_search_screen()
-        
-        # Update mode button text
         self.update_mode_button()
 
     def initialize_search_screen(self) -> None:
-        """Initialize the search screen after it has been composed."""
-        # Get the search screen and initialize it
         search_screen = cast(SearchScreen, self.screen)
         results_log = search_screen.query_one("#results", RichLog)
         results_log.clear()
 
-        # Debug: Check cache state
         cache_size = len(cache) if cache else 0
         results_log.write(f"[dim]Debug: cache_size={cache_size}, cache_exists={cache is not None}[/dim]")
         results_log.write("")
@@ -792,13 +709,10 @@ class SearchApp(App):
             )
 
     def on_button_pressed(self, event) -> None:
-        """Handle button presses in modal screens."""
         if self.loading:
             return
-
-        if event.button.id == "confirm-btn":
-            # This is the confirm button in the analyze confirmation dialog
-            pass  # Handled by ConfirmAnalyzeScreen
+        if event.button.id in ("confirm-btn", "cancel-btn"):
+            pass
         elif event.button.id == "cancel-btn":
             # This is the cancel button in the analyze confirmation dialog
             pass  # Handled by ConfirmAnalyzeScreen
@@ -824,7 +738,6 @@ class SearchApp(App):
             self.display_preview(0)
 
     def perform_test_search(self, query: str) -> list:
-        """Perform search in test mode without real model."""
         global cache
 
         if not query.strip() or not cache:
@@ -835,13 +748,10 @@ class SearchApp(App):
 
         for path, (content, embedding) in cache.items():
             content_lower = content.lower()
-            # Simple text matching for test mode
             if query_lower in content_lower:
-                # Create a dummy score based on how well it matches
                 score = 0.8
                 results.append((score, path, content))
 
-        # Sort by score descending
         results.sort(key=lambda x: x[0], reverse=True)
         return results[:self.MAX_RESULTS]
 
@@ -930,38 +840,30 @@ class SearchApp(App):
         log.write("")
 
     def get_note_title(self, content, filename):
-        """Extract note title from content (first H1) or fallback to filename."""
         lines = content.split('\n')
         for line in lines:
             line = line.strip()
             if line.startswith('# '):
                 return line[2:].strip()
-        # Fallback to filename without extension
         return Path(filename).stem
 
     def write_wikilink_suggestions(self, log):
-        """Display wikilink suggestions in the results panel."""
         if hasattr(self, 'current_suggestions') and self.current_suggestions:
             for i, suggestion in enumerate(self.current_suggestions):
                 score = suggestion['score']
                 candidate = suggestion['candidate']
                 filename = suggestion['filename']
                 source_note = suggestion.get('source_note', 'Unknown')
-                
-                # Get target note title
                 target_title = self.get_note_title(suggestion.get('note_content', ''), filename)
-                
                 is_selected = i == self.selected_index
 
                 if is_selected:
-                    # Compact format: "0.740 test.md (machine learning) -> ml.md (note title)"
                     log.write(f"[bold #f5dede on #5d2828]{score:.3f}  {source_note} ({candidate}) -> {filename} ({target_title})[/]")
                 else:
                     log.write(f"[#cd5c5c]{score:.3f}  {source_note} ({candidate}) -> {filename} ({target_title})")
 
                 log.write("")
         else:
-            # Fallback if no suggestions data
             for i, (score, filename, wikilink) in enumerate(self.current_results):
                 is_selected = i == self.selected_index
 
@@ -1064,7 +966,6 @@ class SearchApp(App):
             event.stop()
 
             if self.app_mode == MODE_SEARCH:
-                # Search mode navigation
                 if not self.current_results:
                     return
 
@@ -1079,7 +980,6 @@ class SearchApp(App):
                 self.display_preview(self.selected_index)
 
             elif self.app_mode == MODE_ANALYZE:
-                # Analyze mode navigation through ALL suggestions
                 if not self.all_analysis_suggestions:
                     return
 
@@ -1130,9 +1030,7 @@ class SearchApp(App):
                 self.analyze_current_note()
 
     def toggle_app_mode(self) -> None:
-        """Switch between search and analyze modes."""
         if self.app_mode == MODE_SEARCH:
-            # Show confirmation dialog before switching to analyze mode (unless in test mode)
             if not self.test_mode:
                 global cache
                 note_count = len(cache) if cache else 0
@@ -1141,7 +1039,6 @@ class SearchApp(App):
                     if confirmed:
                         self.app_mode = MODE_ANALYZE
                         self.switch_screen("analyze")
-                        # Start the scan asynchronously
                         self.call_later(self.scan_all_notes_for_wikilinks)
                         self.call_later(self.update_mode_button)
 
@@ -1150,50 +1047,37 @@ class SearchApp(App):
 
             self.app_mode = MODE_ANALYZE
             self.switch_screen("analyze")
-            # Start the scan asynchronously
             self.call_later(self.scan_all_notes_for_wikilinks)
         else:
             self.app_mode = MODE_SEARCH
             self.switch_screen("search")
         
-        # Update mode button text after switching
         self.call_later(self.update_mode_button)
 
     async def scan_all_notes_for_wikilinks(self) -> None:
-        """Scan ALL notes in the folder and generate wikilink suggestions with progress."""
         global model, cache
 
         if not model or not cache or self.loading:
             return
 
-
-
         try:
-            # Get the analyze screen
             analyze_screen = cast(AnalyzeScreen, self.screen)
 
-            # Initialize progress
             total_notes = len(cache)
             analyze_screen.update_progress(0, f"Preparing to scan {total_notes} notes...")
 
             all_suggestions = []
             processed_count = 0
 
-            # Process each note with progress updates
             for note_path, (note_content, note_embedding) in cache.items():
                 filename = Path(note_path).name
 
-                # Update progress
                 progress_percent = int((processed_count / total_notes) * 100)
                 analyze_screen.update_progress(progress_percent, f"Analyzing: {filename}")
 
-                # Load spaCy model if available
                 nlp = load_spacy_model()
-
-                # Analyze this note for wikilink candidates
                 suggestions = analyze_text_for_wikilinks(note_content, model, cache, nlp, note_path)
 
-                # Add note context to each suggestion
                 for suggestion in suggestions:
                     suggestion['source_note'] = filename
                     suggestion['source_note_path'] = note_path
@@ -1202,25 +1086,21 @@ class SearchApp(App):
                 all_suggestions.extend(suggestions)
                 processed_count += 1
 
-                # Small delay to allow UI updates
                 await asyncio.sleep(0.01)
 
-            # Sort by score
             all_suggestions.sort(key=lambda x: x['score'], reverse=True)
 
             self.all_analysis_suggestions = all_suggestions
             self.selected_suggestion_index = 0
 
             analyze_screen.update_progress(100, f"Scan complete! Found {len(all_suggestions)} suggestions")
-            await asyncio.sleep(1.0)  # Show completion message briefly
+            await asyncio.sleep(1.0)
 
             analyze_screen = cast(AnalyzeScreen, self.screen)
             analyze_screen.display_all_analysis_results()
 
             if all_suggestions:
                 analyze_screen.display_analysis_preview(0)
-
-
 
         except Exception as e:
             analyze_screen = cast(AnalyzeScreen, self.screen)
@@ -1230,33 +1110,26 @@ class SearchApp(App):
             analyze_screen.display_all_analysis_results()
 
     def analyze_current_note(self) -> None:
-        """Analyze the currently viewed note for wikilink candidates."""
         global model, cache
 
         if not model or not cache or self.loading or not self.current_results:
             return
 
         try:
-            # Switch to search screen for displaying analysis results
             self.switch_screen("search")
-            self.app_mode = MODE_SEARCH  # Reset mode since we're switching screens
+            self.app_mode = MODE_SEARCH
 
-            # Get the currently selected note content
             current_index = self.selected_index
             if current_index >= len(self.current_results):
                 return
 
             score, note_path, note_content = self.current_results[current_index]
 
-            # Load spaCy model if available
             nlp = load_spacy_model()
-
-            # Analyze the note content for wikilink candidates
             suggestions = analyze_text_for_wikilinks(note_content, model, cache, nlp, note_path)
 
-            # Convert suggestions to the format expected by display methods
             self.current_analysis_results = [(s['score'], s['filename'], s['wikilink']) for s in suggestions]
-            self.current_suggestions = suggestions  # Store full suggestions for preview
+            self.current_suggestions = suggestions
             self.selected_suggestion_index = 0
 
             self.display_analysis_results()
@@ -1268,7 +1141,6 @@ class SearchApp(App):
             print(f"Error analyzing current note: {e}")
             self.current_analysis_results = []
             self.current_suggestions = []
-            # Switch to search screen for error display
             self.switch_screen("search")
             self.app_mode = MODE_SEARCH
             self.display_analysis_results()
@@ -1346,9 +1218,17 @@ class SearchApp(App):
         except:
             pass
 
+    @property
+    def notes_dir(self) -> Path | None:
+        return self._notes_dir
+
+    @notes_dir.setter
+    def notes_dir(self, value: Path) -> None:
+        self._notes_dir = value
+
     def get_notes_dir(self):
-        if self.notes_dir:
-            return self.notes_dir
+        if self._notes_dir:
+            return self._notes_dir
         # Fallback to parsing arguments if not set (for testing)
         args = self.parse_arguments()
         return Path(args.notes_dir)

@@ -1,38 +1,32 @@
 # Agent Guidelines for Semantic Note Search
+Look at the README.md TODOs for your list of current tasks. plan things out on your own, break tasks down, and do them one by one. rule of thumb is ensure te app is always in a working state at all times. do not touch the readme TODOs except for ticking the checkmarks.
 
 ## Commands
+DO NOT RUN WITHOUT A FAILSAFE (like a 20s timer), THE TOOL DOES NOT SUPPORT TUIS
 - **Run**: `python main.py`
 - **Run in test mode**: `python main.py --test-mode`
-- **Dependencies**: `pip install textual sentence-transformers torch "textual[syntax]" pytest pytest-asyncio pytest-textual-snapshot`
-- **Test**: `pytest` (comprehensive test suite)
+- **Test**: `pytest`
 - **Single test**: `pytest tests/test_ai.py::test_search_functionality`
 
 ## Code Style
+- !!! Priotise human readibility above everything else !!!
+- Simplicity is key, make the simplest possible solution unless you're explictly told to do something more complex
+- Keep nesting below 3-4 levels
+- If a class/function/file gets too complex, split them out.
+- Comments: Don't comment unless it's nessasary. remember that we already have docstrings
 - **Imports**: Group imports: stdlib → third-party → local, use absolute imports
 - **Formatting**: Follow PEP 8, 4-space indentation, 79-char line limit
-- **Types**: Use type hints where helpful, especially for function signatures
+- **Types**: Always use type hints when possible
 - **Naming**: snake_case for functions/variables, PascalCase for classes
 - **Error Handling**: Use try/except for file operations, provide clear error messages
 - **Documentation**: Use docstrings for public functions and classes
-- **Architecture**: Single-file application, keep concerns separated (UI vs business logic)
+- **Architecture**: keep concerns separated (UI vs business logic)
 
 ## Project Structure
-- **Single Python file**: All functionality in `main.py`
-- **Configuration**: Constants at top, CLI/TUI app class at bottom
 - **Dependencies**: textual for TUI, sentence-transformers for ML, torch for tensor ops
 
-## Key Requirements
-- Interactive TUI with search bar at bottom, results left, preview right
-- Arrow key navigation between results
-- Real-time search as you type
-- Persistent caching with pickle for performance
-- Handle missing dependencies gracefully
-
-## Exit Commands
-- Press `q`, `escape`, or `ctrl+c` to quit
-
 ## Other
-- Try to use search MCP tools to search for documentation
+- ALways use the search MCP tools to search for documentation on the internet
 - The user may edit the files. Do NOT override the user's changes.
 
 ## Critical Notes

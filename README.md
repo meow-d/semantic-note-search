@@ -39,40 +39,20 @@ First run will take a while as it'll need to download the sentence transformer m
 MIT License - feel free to use, modify, and distribute.
 
 ## Todo
-- [x] Fix loading screen display issues
-- [x] Update test to match new changes
-- [x] Remove all try:imports, and just import normally
-- [x] Different modes should have different UIs, currently all panels are displayed all at once
-- [x] remove all print() statements that can't be viewed anyways
-- [x] remove unused code, see warnings
-- [x] nicer loading screen
-- [x] i don't see the scan confirmation ui in test mode (not sure if it's in normal mode either). is it there, or is it just not showing in test mode?
-- [x] double check if the search still works, it doesn't seem to be working in test mode, or normal mode either
-- [x] change terminology to "checking index cache" "indexing" rather than "building cache"
-- [x] Fixed search functionality - typing in the text box now works for queries of length 1+, refactored unreliable model check to use self.test_mode, fixed test search to return results.
-- [x] improve wikilink suggestion
-  - [x] files cannot link to themselves
-  - [x] wikilink preview should have the wikilink applied
-  - [x] wikilink preview should have the wikilink highlighted with bg color, and scrolled into view (proper scrolling implemented with cursor positioning)
-  - [x] double check if it ignores headings and yaml frontmatter and existing links
+- [x] better wikilink preview
+  - [x] on the left, the preview should be compact, in two lines. first line being: 0.740 test.md (machine learning). second line being   -> ml.md (note title that you get from the first h1)
+  - [x] on the right, remove duplicate wikilink suggestions info on the source note. both panels also have too many nesting and borders, causing it to look ugly.
+  - [x] the wikilinks come out as [bold #f5dede on #8b3a3a][[ml_notes.md|machine learning]][/bold #f5dede on #8b3a3a], rather than rendered
 
-- [x] Click should select item
-- [x] arrow keys scrolling should scroll the select item into view (need to refer to textual docs)
-- [x] split code info files
-- [x] different cache for different directories
-- [x] the ui still gets stuck when indexing/building cache
-- [x] investigate slow TUI startup
+- [x] some failures, like incompatible cuda version causing the app to not work entirely, fail silently when it shouldn't.
 
-- [x] more minimal, borderless startup screen, centered app title, then current progress (for which stage), detailed progress (for which file it's indexing), and a progress bar (updated with detailed progress too)
-- [ ] major bug: cache not saved when using custom notes dir, and using cuda.
-- [ ] major bug: it also displays "notes not found"
-- [ ] you STILL can't quit in the loading screen
-- [-] better wikilink preview
-  - [ ] on the left, the preview should be compact, in two lines. first line being: 0.740 test.md (machine learning). second line being   -> ml.md (note title that you get from the first h1)
-  - [ ] on the right, remove duplicate wikilink suggestions info. the first and second note should just be displayed as is, in two different panes.
-  - [x] the button to switch modes back should be at the top bar. and it doesn't work at all. ensure that switching back and forth will not cause the wikilink suggestion results to be lost so the user can switch without havingt to rescan
-  - [ ] the swith mode button has zero height?
+- [x] you STILL can't quit in the loading screen
 
-- [ ] confirmation screen is malformed, some text pushes the box
+- [x] the switch mode button has zero height?
+  - [x] the switch mode button can only switch from search to wikilink mode, not the other way round
+
+- [x] confirmation screen is malformed, some text pushes the box, likely the emoji
 
 ### skip for now
+- [ ] type errors in ai.py
+
