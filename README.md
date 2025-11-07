@@ -49,13 +49,26 @@ MIT License - feel free to use, modify, and distribute.
 - [x] i don't see the scan confirmation ui in test mode (not sure if it's in normal mode either). is it there, or is it just not showing in test mode?
 - [x] double check if the search still works, it doesn't seem to be working in test mode, or normal mode either
 - [x] change terminology to "checking index cache" "indexing" rather than "building cache"
-- [ ] Fixed search functionality - typing in the text box now works for queries of length 1+, refactored unreliable model check to use self.test_mode, fixed test search to return results.
+- [x] Fixed search functionality - typing in the text box now works for queries of length 1+, refactored unreliable model check to use self.test_mode, fixed test search to return results.
+- [x] improve wikilink suggestion
+  - [x] files cannot link to themselves
+  - [x] wikilink preview should have the wikilink applied
+  - [x] wikilink preview should have the wikilink highlighted with bg color, and scrolled into view (basic scrolling implemented)
+  - [x] double check if it ignores headings and yaml frontmatter and existing links
+
+- [x] Click should select item
+- [x] arrow keys scrolling should scroll the select item into view (need to refer to textual docs)
 
 ### skip for now
+- [ ] more minimal, borderless startup screen, centered app title, then current progress (for which stage), detailed progress (for which file it's indexing), and a progress bar (updated with detailed progress too)
+- [ ] better wikilink preview
+  - [ ] on the left, the preview should be compact, in two lines. first line being: 0.740 test.md (machine learning). second line being   -> ml.md (note title that you get from the first h1)
+  - [ ] on the right, remove duplicate wikilink suggestions info. the first and second note should just be displayed as is, in two different panes.
+  - [ ] there's no button to switch modes back
 - [ ] the ui still gets stuck when indexing/building cache
 - [ ] different cache for different directories
 - [ ] investigate slow TUI startup
+- [ ] confirmation screen is malformed, some text pushes the box
+
 - [ ] split code info files
-- [-] Fix item selection and scrolling
-- [-] Fix click handling on results
 

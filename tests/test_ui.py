@@ -7,10 +7,12 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
-# Add the current directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the src directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 
-from main import SearchApp, SearchScreen, LoadingScreen, parse_arguments, MODE_SEARCH, MODE_ANALYZE
+from ui import SearchApp, SearchScreen, LoadingScreen, ConfirmAnalyzeScreen
+from config import MODE_SEARCH, MODE_ANALYZE
+from src.main import parse_arguments
 from textual.widgets import RichLog
 
 

@@ -8,10 +8,10 @@ import os
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-# Add the current directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the src directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 
-from main import (
+from ai import (
     load_model,
     build_cache,
     load_cache,
@@ -21,19 +21,19 @@ from main import (
     load_spacy_model,
     analyze_text_for_wikilinks,
     search,
-    CACHE_FILE,
+)
+from config import (
+    get_cache_file,
     MODEL_NAME,
     SCORE_THRESHOLD,
-    WIKILINK_SCORE_THRESHOLD,
-    get_all_notes,
-    parse_arguments
+    WIKILINK_SCORE_THRESHOLD
 )
 
 
 class TestModelLoading:
     """Test model loading functionality."""
 
-    @patch('main.SentenceTransformer')
+    @patch('ai.SentenceTransformer')
     def test_load_model_success(self, mock_sentence_transformer):
         """Test successful model loading."""
         mock_model = MagicMock()
@@ -44,7 +44,7 @@ class TestModelLoading:
         mock_sentence_transformer.assert_called_once_with(MODEL_NAME, trust_remote_code=True)
         assert result == mock_model
 
-    @patch('main.SentenceTransformer')
+    @patch('ai.SentenceTransformer')
     @patch('builtins.print')
     def test_load_model_prints_messages(self, mock_print, mock_sentence_transformer):
         """Test that model loading prints appropriate messages."""
@@ -62,7 +62,8 @@ class TestModelLoading:
 class TestCacheOperations:
     """Test cache building and loading functionality."""
 
-    def test_build_cache_creates_proper_structure(self):
+    @pytest.mark.asyncio
+    async def test_build_cache_creates_proper_structure(self):
         """Test that build_cache creates cache with correct structure."""
         # Create mock model and notes
         mock_model = MagicMock()
@@ -84,7 +85,8 @@ class TestCacheOperations:
         with patch('builtins.open', create=True) as mock_open:
             mock_open.return_value.__enter__.return_value.read.side_effect = test_contents
 
-            cache = build_cache(test_notes, mock_model)
+            cache_file = Path('/tmp/test_cache.pkl')
+            cache = await build_cache(test_notes, mock_model, cache_file)
 
             # Verify structure
             assert isinstance(cache, dict)
@@ -99,9 +101,9 @@ class TestCacheOperations:
 
     def test_load_cache_file_not_exists(self):
         """Test loading cache when file doesn't exist."""
-        with patch('main.CACHE_FILE', Path('/nonexistent/cache.pkl')):
-            cache = load_cache()
-            assert cache == {}
+        cache_file = Path('/nonexistent/cache.pkl')
+        cache = load_cache(cache_file)
+        assert cache == {}
 
     @patch('pickle.load')
     @patch('builtins.open', create=True)
@@ -112,12 +114,14 @@ class TestCacheOperations:
         }
         mock_pickle_load.return_value = test_cache
 
-        cache = load_cache()
+        cache_file = Path('/tmp/test_cache.pkl')
+        cache = load_cache(cache_file)
 
         assert cache == test_cache
         mock_open.assert_called_once()
 
-    def test_update_cache_for_new_notes(self):
+    @pytest.mark.asyncio
+    async def test_update_cache_for_new_notes(self):
         """Test updating cache with new notes."""
         existing_cache = {
             "notes/old.md": ("old content", torch.randn(768))
@@ -130,7 +134,7 @@ class TestCacheOperations:
         with patch('builtins.open', create=True) as mock_open:
             mock_open.return_value.__enter__.return_value.read.return_value = "new content"
 
-            updated_cache = update_cache_for_new_notes(mock_model, existing_cache, new_notes)
+            updated_cache = await update_cache_for_new_notes(mock_model, existing_cache, new_notes)
 
             assert updated_cache is not None
             assert len(updated_cache) == 2
@@ -177,7 +181,7 @@ class TestSearchFunctionality:
         # Mock the encode method to return proper shape
         mock_model.encode.return_value = torch.randn(768)
         # Mock similarity scores - higher for first result
-        with patch('main.util.cos_sim') as mock_cos_sim:
+        with patch('ai.util.cos_sim') as mock_cos_sim:
             mock_cos_sim.return_value = torch.tensor([[0.8, 0.3, 0.2]])
 
             results = search("machine learning", mock_model, cache)
@@ -196,7 +200,7 @@ class TestSearchFunctionality:
         mock_model = MagicMock()
         mock_model.encode.return_value = torch.randn(768)
         # Set scores: one above threshold, one below
-        with patch('main.util.cos_sim') as mock_cos_sim:
+        with patch('ai.util.cos_sim') as mock_cos_sim:
             mock_cos_sim.return_value = torch.tensor([[SCORE_THRESHOLD + 0.1, SCORE_THRESHOLD - 0.2]])
 
             results = search("test query", mock_model, cache)
@@ -209,7 +213,7 @@ class TestSearchFunctionality:
 class TestWikilinkAnalysis:
     """Test wikilink analysis functionality."""
 
-    @patch('main.spacy')
+    @patch('ai.spacy')
     def test_analyze_text_for_wikilinks_with_spacy(self, mock_spacy):
         """Test wikilink analysis with spaCy available."""
         # This test is complex to mock properly, so we'll just test that it doesn't crash
@@ -218,15 +222,15 @@ class TestWikilinkAnalysis:
         mock_spacy.load.return_value = mock_nlp
 
         # Mock the extraction functions to return some candidates
-        with patch('main.extract_noun_phrases', return_value=["machine learning"]), \
-             patch('main.extract_verb_phrases', return_value=["learn"]):
+        with patch('ai.extract_noun_phrases', return_value=["machine learning"]), \
+             patch('ai.extract_verb_phrases', return_value=["learn"]):
 
             # Mock cache and model
             cache = {"notes/ml.md": ("machine learning content", torch.randn(768))}
             mock_model = MagicMock()
             mock_model.encode.return_value = torch.randn(2, 768)  # 2 candidates
 
-            with patch('main.util.cos_sim') as mock_cos_sim:
+            with patch('ai.util.cos_sim') as mock_cos_sim:
                 mock_cos_sim.return_value = torch.tensor([[0.9, 0.8]])
 
                 text = "I want to learn about machine learning"
@@ -236,7 +240,7 @@ class TestWikilinkAnalysis:
                 assert isinstance(suggestions, list)
         # Should find suggestions for noun phrases
 
-    @patch('main.spacy', None)
+    @patch('ai.spacy', None)
     def test_analyze_text_for_wikilinks_without_spacy(self):
         """Test wikilink analysis fallback when spaCy not available."""
         cache = {"notes/test.md": ("test content", torch.randn(768))}
@@ -274,10 +278,11 @@ class TestWikilinkAnalysis:
 class TestIntegration:
     """Integration tests for combined functionality."""
 
-    @patch('main.SentenceTransformer')
+    @patch('ai.SentenceTransformer')
     @patch('pickle.dump')
     @patch('builtins.open', create=True)
-    def test_load_or_build_cache_integration(self, mock_open, mock_pickle_dump, mock_sentence_transformer):
+    @pytest.mark.asyncio
+    async def test_load_or_build_cache_integration(self, mock_open, mock_pickle_dump, mock_sentence_transformer):
         """Test the complete cache loading/building workflow."""
         mock_model = MagicMock()
         mock_sentence_transformer.return_value = mock_model
@@ -287,7 +292,7 @@ class TestIntegration:
         mock_file = MagicMock()
         mock_open.return_value.__enter__.return_value = mock_file
 
-        with patch('main.get_all_notes') as mock_get_notes:
+        with patch('ai.get_all_notes') as mock_get_notes:
             mock_get_notes.return_value = [Path("notes/test1.md"), Path("notes/test2.md")]
 
             with patch('builtins.open', create=True) as mock_file_open:
@@ -295,7 +300,8 @@ class TestIntegration:
                     "content 1", "content 2"
                 ]
 
-                cache, status = load_or_build_cache(mock_model, {"notes/test1.md", "notes/test2.md"})
+                notes_dir = Path("notes")
+                cache, status = await load_or_build_cache(mock_model, {"notes/test1.md", "notes/test2.md"}, notes_dir)
 
                 assert len(cache) == 2
                 assert all(isinstance(content, str) for content, _ in cache.values())
