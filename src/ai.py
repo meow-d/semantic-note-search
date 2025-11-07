@@ -7,16 +7,13 @@ from pathlib import Path
 
 import torch
 from sentence_transformers import SentenceTransformer, util
+import spacy
 
 from config import (
     MODEL_NAME, QUERY_INSTRUCTION, SCORE_THRESHOLD, WIKILINK_SCORE_THRESHOLD,
     MAX_RESULTS, get_cache_file
 )
 
-try:
-    import spacy
-except ImportError:
-    spacy = None
 
 model = None
 cache = None
@@ -25,17 +22,34 @@ cache = None
 def get_gpu_status():
     """Check GPU availability and return status info."""
     status_info = {
-        'available': torch.cuda.is_available(),
+        'available': False,
         'version': torch.__version__,
-        'cuda_version': torch.version.cuda if torch.cuda.is_available() else None,
-        'device_count': torch.cuda.device_count() if torch.cuda.is_available() else 0,
+        'cuda_version': torch.version.cuda,
+        'device_count': 0,
         'device_name': None,
         'device': "cpu"
     }
     
-    if torch.cuda.is_available():
-        status_info['device_name'] = torch.cuda.get_device_name(0)
-        status_info['device'] = "cuda"
+    try:
+        # Check if CUDA is available
+        if torch.cuda.is_available():
+            status_info['available'] = True
+            status_info['device_count'] = torch.cuda.device_count()
+            status_info['device_name'] = torch.cuda.get_device_name(0) if status_info['device_count'] > 0 else None
+            status_info['device'] = "cuda"
+        else:
+            # Check for other backends like MPS (Apple Silicon) or DirectML
+            if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+                status_info['available'] = True
+                status_info['device'] = "mps"
+                status_info['device_name'] = "Apple Silicon GPU"
+            elif hasattr(torch.backends, 'opencl') and torch.backends.opencl.is_available():
+                status_info['available'] = True
+                status_info['device'] = "opencl"
+                status_info['device_name'] = "OpenCL GPU"
+    except Exception as e:
+        # If any error occurs during detection, fall back to CPU
+        pass
     
     return status_info
 
@@ -44,13 +58,27 @@ def load_model():
     """Load the sentence transformer model."""
     global model
     
-    # Force CPU usage due to CUDA compatibility issues with GTX 1050
-    # GTX 1050 has compute capability 6.1 but PyTorch requires 7.5+
-    device = "cpu"
-    print("Using CPU for model encoding due to CUDA compatibility issues")
+    # Get GPU status and determine best device
+    gpu_status = get_gpu_status()
     
-    model = SentenceTransformer(MODEL_NAME, trust_remote_code=True, device=device)
-    return model
+    if gpu_status['available']:
+        device = gpu_status['device']
+        print(f"Using {device} for model encoding ({gpu_status['device_name']})")
+        
+        # For CUDA, set the device to the first available GPU
+        if device == "cuda" and gpu_status['device_count'] > 0:
+            torch.cuda.set_device(0)
+    else:
+        device = "cpu"
+        print("Using CPU for model encoding (no GPU detected)")
+    
+    try:
+        model = SentenceTransformer(MODEL_NAME, trust_remote_code=True, device=device)
+        return model
+    except Exception as e:
+        print(f"Failed to load model on {device}, falling back to CPU: {e}")
+        model = SentenceTransformer(MODEL_NAME, trust_remote_code=True, device="cpu")
+        return model
 
 
 def get_all_notes(directory):
@@ -77,7 +105,7 @@ async def build_cache(notes, model, cache_file, progress_callback=None):
             with open(note_path, "r", encoding="utf-8") as f:
                 content = f.read()
             if content.strip():
-                embedding = model.encode(QUERY_INSTRUCTION + content, convert_to_tensor=True)
+                embedding = model.encode(QUERY_INSTRUCTION + content, convert_to_tensor=True, device=next(model.parameters()).device)
                 cache[str(note_path)] = (content, embedding)
         except Exception as e:
             # Skip problematic notes but continue processing
@@ -121,7 +149,7 @@ async def update_cache_for_new_notes(model, existing_cache, new_notes, progress_
             with open(note_path, "r", encoding="utf-8") as f:
                 content = f.read()
             if content.strip():
-                embedding = model.encode(QUERY_INSTRUCTION + content, convert_to_tensor=True)
+                embedding = model.encode(QUERY_INSTRUCTION + content, convert_to_tensor=True, device=next(model.parameters()).device)
                 cache[str(note_path)] = (content, embedding)
                 existing_cache[str(note_path)] = (content, embedding)
         except Exception as e:
@@ -352,7 +380,7 @@ def analyze_text_for_wikilinks(text, model, cache, nlp=None, source_note_path=No
 
     try:
         # Embed all candidates
-        candidate_embeddings = model.encode(candidates, convert_to_tensor=True)
+        candidate_embeddings = model.encode(candidates, convert_to_tensor=True, device=next(model.parameters()).device)
         note_paths = list(cache.keys())
         note_embeddings_list = [data[1] for data in cache.values()]
         note_embeddings_tensor = torch.stack(note_embeddings_list)
@@ -403,7 +431,7 @@ def search(query, model, cache, score_threshold=SCORE_THRESHOLD, max_results=MAX
     if not query.strip():
         return []
 
-    query_embedding = model.encode(QUERY_INSTRUCTION + query, convert_to_tensor=True)
+    query_embedding = model.encode(QUERY_INSTRUCTION + query, convert_to_tensor=True, device=next(model.parameters()).device)
 
     note_paths = list(cache.keys())
     note_embeddings_list = [data[1] for data in cache.values()]
