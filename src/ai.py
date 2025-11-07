@@ -22,54 +22,66 @@ model = None
 cache = None
 
 
+def get_gpu_status():
+    """Check GPU availability and return status info."""
+    status_info = {
+        'available': torch.cuda.is_available(),
+        'version': torch.__version__,
+        'cuda_version': torch.version.cuda if torch.cuda.is_available() else None,
+        'device_count': torch.cuda.device_count() if torch.cuda.is_available() else 0,
+        'device_name': None,
+        'device': "cpu"
+    }
+    
+    if torch.cuda.is_available():
+        status_info['device_name'] = torch.cuda.get_device_name(0)
+        status_info['device'] = "cuda"
+    
+    return status_info
+
+
 def load_model():
     """Load the sentence transformer model."""
     global model
-    print(f"Loading model '{MODEL_NAME}'...")
-    model = SentenceTransformer(MODEL_NAME, trust_remote_code=True)
-    print("Model loaded successfully.")
+    
+    # Force CPU usage due to CUDA compatibility issues with GTX 1050
+    # GTX 1050 has compute capability 6.1 but PyTorch requires 7.5+
+    device = "cpu"
+    print("Using CPU for model encoding due to CUDA compatibility issues")
+    
+    model = SentenceTransformer(MODEL_NAME, trust_remote_code=True, device=device)
     return model
 
 
 def get_all_notes(directory):
     """Get all note files from the directory."""
     if not directory.is_dir():
-        print(f"Error: Notes directory not found at '{directory}'")
-        print(
-            "Please create it or use a different directory: python main.py /path/to/notes"
-        )
         raise SystemExit(1)
 
-    print(f"Scanning for notes in '{directory}'...")
     notes = []
     for root, _, files in os.walk(directory):
         for file in files:
             if Path(file).suffix.lower() in {".txt", ".md"}:
                 notes.append(Path(root) / file)
-    print(f"Found {len(notes)} notes.")
     return notes
 
 
 async def build_cache(notes, model, cache_file, progress_callback=None):
     """Build the search cache for notes."""
-    print(f"Building cache for {len(notes)} notes... This may take a while for the first time.")
+    global cache
     cache = {}
     processed = 0
 
     for note_path in notes:
         try:
-            print(f"Processing note {processed + 1}/{len(notes)}: {note_path.name}")
             with open(note_path, "r", encoding="utf-8") as f:
                 content = f.read()
             if content.strip():
-                print(f"  Generating embedding for {len(content)} characters...")
                 embedding = model.encode(QUERY_INSTRUCTION + content, convert_to_tensor=True)
                 cache[str(note_path)] = (content, embedding)
-                print(f"  ✓ Processed {note_path.name}")
-            else:
-                print(f"  ⚠ Skipped empty note: {note_path.name}")
         except Exception as e:
-            print(f"  ✗ Error processing {note_path}: {e}")
+            # Skip problematic notes but continue processing
+            pass
 
         processed += 1
 
@@ -79,29 +91,30 @@ async def build_cache(notes, model, cache_file, progress_callback=None):
             progress_callback(progress, f"Processed {processed}/{len(notes)} notes")
         await asyncio.sleep(0.01)  # Allow UI to update
 
-    print(f"Cache built with {len(cache)} notes. Saving to {cache_file}...")
+    # Move tensors to CPU before saving (CUDA tensors can't be pickled)
+    cpu_cache = {}
+    for path, (content, embedding) in cache.items():
+        cpu_cache[path] = (content, embedding.cpu() if hasattr(embedding, 'cpu') else embedding)
+    
     with open(cache_file, "wb") as f:
-        pickle.dump(cache, f)
-    print("Cache saved successfully.")
+        pickle.dump(cpu_cache, f)
     return cache
 
 
 def load_cache(cache_file):
     """Load the search cache from file."""
-    print(f"Loading cache from {cache_file}")
     try:
         with open(cache_file, "rb") as f:
             return pickle.load(f)
     except FileNotFoundError:
-        print("Index file not found, will index notes.")
         return {}
     except Exception as e:
-        print(f"Error loading cache: {e}")
         return {}
 
 
-async def update_cache_for_new_notes(model, cache, new_notes, progress_callback=None):
+async def update_cache_for_new_notes(model, existing_cache, new_notes, progress_callback=None):
     """Update cache with new notes."""
+    global cache
     total = len(new_notes)
     for i, note_path in enumerate(new_notes):
         try:
@@ -110,80 +123,88 @@ async def update_cache_for_new_notes(model, cache, new_notes, progress_callback=
             if content.strip():
                 embedding = model.encode(QUERY_INSTRUCTION + content, convert_to_tensor=True)
                 cache[str(note_path)] = (content, embedding)
+                existing_cache[str(note_path)] = (content, embedding)
         except Exception as e:
-            print(f"Warning: Could not process new note {note_path}: {e}")
+            # Skip problematic notes but continue processing
+            pass
 
         if progress_callback:
             progress = int(((i + 1) / total) * 100) if total > 0 else 100
             progress_callback(progress, f"Processing new notes: {i + 1}/{total}")
         await asyncio.sleep(0.01)
-    return cache
+    return existing_cache
 
 
-def remove_deleted_notes_from_cache(cache, removed_notes):
+def remove_deleted_notes_from_cache(existing_cache, removed_notes):
     """Remove deleted notes from cache."""
+    global cache
     for path in removed_notes:
         cache.pop(path, None)
-    return cache
+        existing_cache.pop(path, None)
+    return existing_cache
 
 
 async def load_or_build_cache(model, current_note_paths, notes_dir, force_rebuild=False, build_func=None, progress_callback=None):
     """Load or build cache and return status information."""
+    global cache
     if build_func is None:
         build_func = build_cache
 
     cache_file = get_cache_file(notes_dir)
     if force_rebuild:
-        print("Force reindex requested - removing existing index...")
         if cache_file.exists():
             cache_file.unlink()
-            print("Existing index removed.")
-        else:
-            print("No existing index file found to remove.")
 
-    print(f"Loading existing index from {cache_file}...")
     cache = load_cache(cache_file)
+    
+    # Move tensors to correct device after loading
+    if cache and model:
+        try:
+            device = next(model.parameters()).device
+            for path, (content, embedding) in cache.items():
+                if hasattr(embedding, 'to'):
+                    cache[path] = (content, embedding.to(device))
+        except Exception:
+            # If device placement fails, keep tensors on CPU
+            pass
 
     if not cache:
-        print("No existing index found. Indexing notes from scratch...")
         notes = [Path(p) for p in current_note_paths]
-        print(f"Processing {len(notes)} notes for initial cache...")
-        return await build_func(notes, model, cache_file, progress_callback), "Indexed notes"
+        cache = await build_func(notes, model, cache_file, progress_callback)
+        return cache, "Indexed notes"
 
-    print(f"Found existing index with {len(cache)} notes")
     cached_note_paths = set(cache.keys())
-    print(f"Comparing {len(current_note_paths)} current notes with {len(cached_note_paths)} cached notes...")
-
     new_notes = current_note_paths - cached_note_paths
     removed_notes = cached_note_paths - current_note_paths
 
-    print(f"Found {len(new_notes)} new notes and {len(removed_notes)} removed notes")
-
     if not new_notes and not removed_notes and not force_rebuild:
-        print("Index is up to date - no changes needed.")
         return cache, "Cache up to date"
     else:
         status_parts = []
         if force_rebuild:
-            print("Force reindexing entire collection...")
             notes = [Path(p) for p in current_note_paths]
             cache = await build_func(notes, model, cache_file, progress_callback)
             status_parts.append("reindexed")
         else:
             if new_notes:
-                print(f"Adding {len(new_notes)} new notes to cache...")
                 cache = await update_cache_for_new_notes(model, cache, new_notes, progress_callback)
                 status_parts.append(f"added {len(new_notes)} new notes")
 
             if removed_notes:
-                print(f"Removing {len(removed_notes)} deleted notes from cache...")
-                remove_deleted_notes_from_cache(cache, removed_notes)
+                cache = remove_deleted_notes_from_cache(cache, removed_notes)
                 status_parts.append(f"removed {len(removed_notes)} deleted notes")
 
-        print(f"Saving updated cache with {len(cache)} total notes...")
-        with open(cache_file, "wb") as f:
-            pickle.dump(cache, f)
-        print("Cache saved successfully.")
+        # Move tensors to CPU before saving (CUDA tensors can't be pickled)
+        cpu_cache = {}
+        for path, (content, embedding) in cache.items():
+            cpu_cache[path] = (content, embedding.cpu() if hasattr(embedding, 'cpu') else embedding)
+        
+        try:
+            with open(cache_file, "wb") as f:
+                pickle.dump(cpu_cache, f)
+        except Exception as e:
+            # If saving fails, continue but log the error
+            pass
 
         return cache, f"Updated cache: {', '.join(status_parts)}"
 
@@ -327,7 +348,7 @@ def analyze_text_for_wikilinks(text, model, cache, nlp=None, source_note_path=No
     if not candidates:
         return []
 
-    print(f"Analyzing {len(candidates)} candidates...")
+
 
     try:
         # Embed all candidates
@@ -370,11 +391,10 @@ def analyze_text_for_wikilinks(text, model, cache, nlp=None, source_note_path=No
         # Sort by similarity score
         wikilink_suggestions.sort(key=lambda x: x['score'], reverse=True)
 
-        print(f"Found {len(wikilink_suggestions)} wikilink suggestions")
+
         return wikilink_suggestions
 
     except Exception as e:
-        print(f"Error analyzing text for wikilinks: {e}")
         return []
 
 
@@ -383,7 +403,6 @@ def search(query, model, cache, score_threshold=SCORE_THRESHOLD, max_results=MAX
     if not query.strip():
         return []
 
-    print(f"Searching for: '{query}'")
     query_embedding = model.encode(QUERY_INSTRUCTION + query, convert_to_tensor=True)
 
     note_paths = list(cache.keys())

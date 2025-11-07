@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from ui import SearchApp
+from .ui import SearchApp
 
 
 def parse_arguments():
@@ -53,6 +53,7 @@ def main():
 
     app = SearchApp()
     app.test_mode = args.test_mode  # Set test mode from arguments
+    app.notes_dir = notes_dir  # Pass the validated notes directory
     app.run()
 
 

@@ -19,8 +19,9 @@ MODE_ANALYZE = "analyze"
 
 def get_cache_file(notes_dir):
     """Get cache file path based on notes directory."""
-    import hashlib
-    # Create a hash of the notes directory path for unique cache files
-    dir_hash = hashlib.md5(str(notes_dir).encode()).hexdigest()[:8]
-    cache_name = f"cache_{dir_hash}.pkl"
-    return Path(__file__).parent / cache_name
+    # Use notes directory name for cache file, store in project root
+    notes_name = Path(notes_dir).name
+    cache_name = f"cache_{notes_name}.pkl"
+    # Store in project root (parent of src directory)
+    project_root = Path(__file__).parent.parent
+    return project_root / cache_name

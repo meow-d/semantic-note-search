@@ -60,14 +60,19 @@ MIT License - feel free to use, modify, and distribute.
 - [x] arrow keys scrolling should scroll the select item into view (need to refer to textual docs)
 - [x] split code info files
 - [x] different cache for different directories
-- [x] confirmation screen is malformed, some text pushes the box
 - [x] the ui still gets stuck when indexing/building cache
 - [x] investigate slow TUI startup
 
 - [x] more minimal, borderless startup screen, centered app title, then current progress (for which stage), detailed progress (for which file it's indexing), and a progress bar (updated with detailed progress too)
-- [ ] better wikilink preview
+- [ ] major bug: cache not saved when using custom notes dir, and using cuda.
+- [ ] major bug: it also displays "notes not found"
+- [ ] you STILL can't quit in the loading screen
+- [-] better wikilink preview
   - [ ] on the left, the preview should be compact, in two lines. first line being: 0.740 test.md (machine learning). second line being   -> ml.md (note title that you get from the first h1)
   - [ ] on the right, remove duplicate wikilink suggestions info. the first and second note should just be displayed as is, in two different panes.
-  - [ ] the button to switch modes back should be at the top bar. and it doesn't work at all. ensure that switching back and forth will not cause the wikilink suggestion results to be lost so the user can switch without havingt to rescan
+  - [x] the button to switch modes back should be at the top bar. and it doesn't work at all. ensure that switching back and forth will not cause the wikilink suggestion results to be lost so the user can switch without havingt to rescan
+  - [ ] the swith mode button has zero height?
+
+- [ ] confirmation screen is malformed, some text pushes the box
 
 ### skip for now

@@ -34,15 +34,19 @@ class TestModelLoading:
     """Test model loading functionality."""
 
     @patch('ai.SentenceTransformer')
-    def test_load_model_success(self, mock_sentence_transformer):
+    @patch('builtins.print')
+    def test_load_model_success(self, mock_print, mock_sentence_transformer):
         """Test successful model loading."""
         mock_model = MagicMock()
         mock_sentence_transformer.return_value = mock_model
 
         result = load_model()
 
-        mock_sentence_transformer.assert_called_once_with(MODEL_NAME, trust_remote_code=True)
+        mock_sentence_transformer.assert_called_once_with(MODEL_NAME, trust_remote_code=True, device='cpu')
         assert result == mock_model
+        # Check that CPU message was printed
+        print_calls = [call.args[0] for call in mock_print.call_args_list]
+        assert any("CPU for model encoding" in msg for msg in print_calls)
 
     @patch('ai.SentenceTransformer')
     @patch('builtins.print')
@@ -53,10 +57,9 @@ class TestModelLoading:
 
         load_model()
 
-        # Check that loading and loaded messages were printed
+        # Check that CPU message was printed
         print_calls = [call.args[0] for call in mock_print.call_args_list]
-        assert any("Loading model" in msg for msg in print_calls)
-        assert any("Model loaded successfully" in msg for msg in print_calls)
+        assert any("CPU for model encoding" in msg for msg in print_calls)
 
 
 class TestCacheOperations:
@@ -126,20 +129,24 @@ class TestCacheOperations:
         existing_cache = {
             "notes/old.md": ("old content", torch.randn(768))
         }
-
+    
         new_notes = [Path("notes/new.md")]
         mock_model = MagicMock()
         mock_model.encode.return_value = torch.randn(1, 768)
-
+    
         with patch('builtins.open', create=True) as mock_open:
             mock_open.return_value.__enter__.return_value.read.return_value = "new content"
-
-            updated_cache = await update_cache_for_new_notes(mock_model, existing_cache, new_notes)
-
-            assert updated_cache is not None
-            assert len(updated_cache) == 2
-            assert "notes/new.md" in updated_cache
-            assert "notes/old.md" in updated_cache
+    
+            # Reset global cache before test
+            import ai
+            ai.cache = existing_cache.copy()
+        
+            returned_cache = await update_cache_for_new_notes(mock_model, existing_cache, new_notes)
+    
+            assert returned_cache is not None
+            assert len(returned_cache) == 2
+            assert "notes/new.md" in returned_cache
+            assert "notes/old.md" in returned_cache
 
     def test_remove_deleted_notes_from_cache(self):
         """Test removing deleted notes from cache."""
@@ -148,15 +155,20 @@ class TestCacheOperations:
             "notes/deleted.md": ("content2", torch.randn(768)),
             "notes/also_deleted.md": ("content3", torch.randn(768))
         }
-
+    
         existing_notes = {"notes/exists.md"}
-
-        cleaned_cache = remove_deleted_notes_from_cache(cache, {"notes/deleted.md", "notes/also_deleted.md"})
-
-        assert cleaned_cache is not None
-        assert len(cleaned_cache) == 1
-        assert "notes/exists.md" in cleaned_cache
-        assert "notes/deleted.md" not in cleaned_cache
+    
+        # Reset global cache before test
+        import ai
+        ai.cache = cache.copy()
+        
+        returned_cache = remove_deleted_notes_from_cache(cache, {"notes/deleted.md", "notes/also_deleted.md"})
+    
+        assert returned_cache is not None
+        assert len(returned_cache) == 1
+        assert "notes/exists.md" in returned_cache
+        assert "notes/deleted.md" not in returned_cache
+        assert "notes/also_deleted.md" not in returned_cache
 
 
 class TestSearchFunctionality:

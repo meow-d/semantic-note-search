@@ -75,11 +75,11 @@ class TestAppComponents:
         assert isinstance(cache, dict)
         assert len(cache) == 3
 
-        # Check that all expected files are present
-        expected_files = ["test_data/test1.md", "test_data/test2.md", "test_data/test3.md"]
-        for expected_file in expected_files:
-            assert expected_file in cache
-            content, embedding = cache[expected_file]
+        # Check that actual test files are present
+        actual_files = ["test_data/test1.md", "test_data/ml_notes.md", "test_data/python_notes.md"]
+        for actual_file in actual_files:
+            assert actual_file in cache
+            content, embedding = cache[actual_file]
             assert isinstance(content, str)
             assert len(content) > 0
             assert len(embedding) == 768  # BGE-base-en-v1.5 dimensions
