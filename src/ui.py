@@ -211,11 +211,10 @@ class AnalyzeScreen(Screen):
                 is_selected = i == app.selected_suggestion_index
 
                 if is_selected:
-                    results_log.write(f"[bold #f5dede on #5d2828]{score:.3f}  {source_note} ({candidate})[/]")
-                    results_log.write(f"[#f5dede on #5d2828]   -> {suggestion['filename']} ({target_title})[/]")
+                    results_log.write(f"[bold #f5dede on #5d2828]{score:.3f}  {source_note} ({candidate}) -> {suggestion['filename']} ({target_title})[/]")
                 else:
-                    results_log.write(f"[#cd5c5c]{score:.3f}  {source_note} ({candidate})")
-                    results_log.write(f"[dim]   -> {suggestion['filename']} ({target_title})[/dim]")
+                    results_log.write(f"[#cd5c5c]{score:.3f}  {source_note} ({candidate}) -> {suggestion['filename']} ({target_title})")
+                results_log.write("")
 
         except Exception as e:
             print(f"Error displaying all analysis results: {e}")
@@ -235,37 +234,35 @@ class AnalyzeScreen(Screen):
 
             suggestion = app.all_analysis_suggestions[index]
             source_note_path = suggestion['source_note_path']
-            
+
             global cache
             if cache and source_note_path in cache:
                 full_source_content = cache[source_note_path][0]
             else:
                 full_source_content = suggestion['source_note_content']
 
+            # Insert the suggested wikilink into the source content
             wikilink = suggestion['wikilink']
             candidate = suggestion['candidate']
+            # Replace the first occurrence of the candidate with the wikilink syntax
+            modified_source_content = full_source_content.replace(candidate, wikilink, 1)
 
-            # Parse wikilink to get display text
+            # For preview, show the raw [[ ]] syntax without processing existing wikilinks
+            source_area.load_text(modified_source_content)
+
+            # Highlight the inserted wikilink
+            app.add_wikilink_highlights(source_area, modified_source_content, modified_source_content)
+
+            # Find the position of the suggested wikilink in the content for cursor positioning
             import re
-            wikilink_match = re.match(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]', wikilink)
+            wikilink_match = re.match(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]', suggestion['wikilink'])
+            match = None
             if wikilink_match:
                 link_target = wikilink_match.group(1)
                 display_text = wikilink_match.group(2) if wikilink_match.group(2) else link_target
-            else:
-                display_text = candidate
-
-            pattern = re.compile(re.escape(wikilink), re.IGNORECASE)
-            match = pattern.search(full_source_content)
-            if match:
-                highlighted_content = full_source_content[:match.start()] + display_text + full_source_content[match.end():]
-                lines_before = full_source_content[:match.start()].count('\n')
-            else:
-                highlighted_content = full_source_content
-                lines_before = 0
-
-            source_content = highlighted_content
-
-            source_area.load_text(source_content)
+                display_pattern = re.compile(re.escape(display_text), re.IGNORECASE)
+                match = display_pattern.search(modified_source_content)
+            lines_before = modified_source_content[:match.start()].count('\n') if match else 0
 
             linked_filename = suggestion['filename']
             target_content = ""
@@ -285,14 +282,16 @@ class AnalyzeScreen(Screen):
             else:
                 target_content += "Cache not available"
 
-            target_area.load_text(target_content)
+            processed_target_content = app.process_wikilinks_for_display(target_content)
+            target_area.load_text(processed_target_content)
+            app.add_wikilink_highlights(target_area, target_content, processed_target_content)
 
             if match:
                 source_area.move_cursor((lines_before + 5, 0))
                 source_area.scroll_cursor_visible()
             else:
                 source_area.scroll_home()
-            
+
             target_area.scroll_home()
 
         except Exception as e:
@@ -355,6 +354,32 @@ class ConfirmAnalyzeScreen(ModalScreen[bool]):
 
 
 class SearchApp(App):
+
+    def process_wikilinks_for_display(self, content: str) -> str:
+        """Replace wikilink syntax with display text for preview rendering."""
+        import re
+        pattern = re.compile(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]')
+
+        def replace_match(match):
+            link_target = match.group(1)
+            display_text = match.group(2) if match.group(2) else link_target
+            return display_text
+
+        return pattern.sub(replace_match, content)
+
+    def add_wikilink_highlights(self, text_area: TextArea, original_content: str, processed_content: str) -> None:
+        """Add syntax highlights for wikilinks in the given TextArea based on processed content."""
+        import re
+        pattern = re.compile(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]')
+        original_lines = original_content.split('\n')
+        processed_lines = processed_content.split('\n')
+
+        for line_idx, (orig_line, proc_line) in enumerate(zip(original_lines, processed_lines)):
+            for match in pattern.finditer(orig_line):
+                # Highlight the entire [[ ]] wikilink syntax
+                start_pos = match.start()
+                end_pos = match.end()
+                text_area._highlights[line_idx].append((start_pos, end_pos, "link.uri"))
 
     CSS = """
     Screen { background: #1a0d0d; }
@@ -668,7 +693,7 @@ class SearchApp(App):
 
         for note_path in actual_notes:
             if note_path.name == "test1.md":
-                content = "# Test Note 1\n\nThis is a test note about machine learning and artificial intelligence. It covers topics like neural networks, deep learning, and natural language processing."
+                content = "# Test Note 1\n\nThis is a test note about [[ml_notes.md|artificial intelligence]] and machine learning. It covers topics like neural networks, deep learning, and natural language processing."
             elif note_path.name == "ml_notes.md":
                 content = "# Machine Learning Notes\n\nThis note covers machine learning concepts including supervised learning, unsupervised learning, neural networks, and deep learning architectures."
             elif note_path.name == "python_notes.md":
@@ -951,13 +976,21 @@ class SearchApp(App):
         score, path, content = self.current_results[index]
         rel_path = str(path).replace(str(Path.home()), "~")
 
-        # Combine header and content
+        # Process wikilinks for display
+        processed_content = self.process_wikilinks_for_display(content)
+
+        # Combine header and processed content
         header = f"{rel_path}\n"
         header += f"Score: {score:.4f}\n\n"
-        full_content = header + content
+        full_content = header + content  # Keep original for highlighting
+        full_processed_content = header + processed_content
 
         preview_area.clear()
-        preview_area.load_text(full_content)
+        preview_area.load_text(full_processed_content)
+
+        # Add wikilink highlights
+        self.add_wikilink_highlights(preview_area, full_content, full_processed_content)
+
         preview_area.scroll_home()
 
     def on_key(self, event) -> None:

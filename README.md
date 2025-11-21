@@ -39,20 +39,12 @@ First run will take a while as it'll need to download the sentence transformer m
 MIT License - feel free to use, modify, and distribute.
 
 ## Todo
-- [x] better wikilink preview
-  - [x] on the left, the preview should be compact, in two lines. first line being: 0.740 test.md (machine learning). second line being   -> ml.md (note title that you get from the first h1)
-  - [x] on the right, remove duplicate wikilink suggestions info on the source note. both panels also have too many nesting and borders, causing it to look ugly.
-  - [x] the wikilinks come out as [bold #f5dede on #8b3a3a][[ml_notes.md|machine learning]][/bold #f5dede on #8b3a3a], rather than rendered
-  - [x] left pane just doesn't have any info now, nothing below "Navigate with ↑↓ arrows"
-
-- [x] you STILL can't quit in the loading screen
-
-- [x] the switch mode button has zero height?
-  - [x] the switch mode button can only switch from search to wikilink mode, not the other way round
-
-- [x] confirmation screen is malformed, some text pushes the box, likely the emoji
+- [x] in the wikilink previews, top right, wikilinks are not applied. right now it's "This is a test note about artificial intelligence and machine learning.". it should be "This is a test note about [[ml_notes|artificial intelligence]] and machine learning."
+- [x] look into textual tui documentation on how to make text inside textarea highlighted. then, highllight the wikilink previews, everything between [[]]
 
 ### skip for now
 - [ ] type errors in ai.py
 - [ ] separate the textual css in separate file
+- [ ] remove test mode entirely
+- [ ] update tests
 
