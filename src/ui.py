@@ -117,15 +117,9 @@ class SearchScreen(Screen):
         query = event.value.strip()
         if query and len(query) >= 1:
             if app.app_mode == MODE_SEARCH:
-                if app.test_mode:
-                    await app.perform_search(query)
-                else:
-                    app.debounce_search(query)
+                app.debounce_search(query)
             else:
-                if app.test_mode:
-                    await app.analyze_text(query)
-                else:
-                    app.debounce_analysis(query)
+                app.debounce_analysis(query)
         elif not query:
             app.clear_results()
 
@@ -428,6 +422,10 @@ class SearchApp(App):
         self.call_later(self.initialize_app_async)
 
     async def initialize_app_async(self) -> None:
+        if self.test_mode:
+            self.show_main_interface()
+            return
+
         global model, cache
 
         loading_screen = cast(LoadingScreen, self.screen)
@@ -439,77 +437,64 @@ class SearchApp(App):
             loading_screen.update_status("Initializing...")
             await self.force_ui_update()
 
-            if not self.test_mode:
-                loading_screen.update_status("Checking GPU availability...")
-                loading_screen.update_progress(5)
-                await self.force_ui_update()
+            loading_screen.update_status("Checking GPU availability...")
+            loading_screen.update_progress(5)
+            await self.force_ui_update()
 
-                from ai import get_gpu_status
+            from ai import get_gpu_status
 
-                gpu_status = get_gpu_status()
+            gpu_status = get_gpu_status()
 
-                if gpu_status["available"]:
-                    subtitle = f"🚀 Using GPU: {gpu_status['device_name']}"
-                else:
-                    subtitle = "💻 Using CPU (install CUDA for GPU acceleration)"
-
-                loading_screen.update_subtitle(subtitle)
-                loading_screen.update_progress(10)
-                await self.force_ui_update()
-
-                loading_screen.update_status("Loading AI model...")
-                loading_screen.update_progress(15)
-                await self.force_ui_update()
-
-                model = load_model()
-                if model is None:
-                    raise Exception(
-                        "Failed to load AI model. Please check your installation and try again."
-                    )
-                loading_screen.update_progress(40)
-                await self.force_ui_update()
-
-                loading_screen.update_status("Scanning notes...")
-                loading_screen.update_progress(50)
-                await self.force_ui_update()
-
-                current_notes = get_all_notes(self.get_notes_dir())
-                current_note_paths = {str(p) for p in current_notes}
-                loading_screen.update_status(f"Found {len(current_notes)} notes...")
-                loading_screen.update_progress(70)
-                await self.force_ui_update()
-
-                loading_screen.update_status("Indexing notes...")
-                loading_screen.update_progress(80)
-                await self.force_ui_update()
-
-                def progress_callback(progress, status):
-                    loading_screen.update_progress(progress)
-                    loading_screen.update_status(status)
-
-                import ai
-
-                ai_cache, cache_status = await load_or_build_cache(
-                    model,
-                    current_note_paths,
-                    self.get_notes_dir(),
-                    args.rebuild_cache,
-                    progress_callback=progress_callback,
-                )
-                cache = ai_cache
-                loading_screen.update_progress(95)
+            if gpu_status["available"]:
+                subtitle = f"🚀 Using GPU: {gpu_status['device_name']}"
             else:
-                loading_screen.update_status("Loading test data...")
-                loading_screen.update_progress(25)
-                await self.force_ui_update()
+                subtitle = "💻 Using CPU (install CUDA for GPU acceleration)"
 
-                model = None
-                import ai
+            loading_screen.update_subtitle(subtitle)
+            loading_screen.update_progress(10)
+            await self.force_ui_update()
 
-                ai.cache = self.create_test_cache()
-                loading_screen.update_progress(75)
-                await self.force_ui_update()
+            loading_screen.update_status("Loading AI model...")
+            loading_screen.update_progress(15)
+            await self.force_ui_update()
 
+            model = load_model()
+            if model is None:
+                raise Exception(
+                    "Failed to load AI model. Please check your installation and try again."
+                )
+            loading_screen.update_progress(40)
+            await self.force_ui_update()
+
+            loading_screen.update_status("Scanning notes...")
+            loading_screen.update_progress(50)
+            await self.force_ui_update()
+
+            current_notes = get_all_notes(self.get_notes_dir())
+            current_note_paths = {str(p) for p in current_notes}
+            loading_screen.update_status(f"Found {len(current_notes)} notes...")
+            loading_screen.update_progress(70)
+            await self.force_ui_update()
+
+            loading_screen.update_status("Indexing notes...")
+            loading_screen.update_progress(80)
+            await self.force_ui_update()
+
+            def progress_callback(progress, status):
+                loading_screen.update_progress(progress)
+                loading_screen.update_status(status)
+
+            import ai
+
+            ai_cache, cache_status = await load_or_build_cache(
+                model,
+                current_note_paths,
+                self.get_notes_dir(),
+                args.rebuild_cache,
+                progress_callback=progress_callback,
+            )
+            cache = ai_cache
+            loading_screen.update_progress(95)
             loading_screen.update_status("Starting application...")
             loading_screen.update_progress(100)
             await self.force_ui_update()
@@ -521,29 +506,6 @@ class SearchApp(App):
 
     async def force_ui_update(self) -> None:
         await asyncio.sleep(0.01)
-
-    def create_test_cache(self):
-        import torch
-        from ai import get_all_notes
-
-        notes_dir = self.get_notes_dir()
-        actual_notes = get_all_notes(notes_dir)
-        dummy_cache = {}
-
-        for note_path in actual_notes:
-            if note_path.name == "test1.md":
-                content = "# Test Note 1\n\nThis is a test note about [[ml_notes.md|artificial intelligence]] and machine learning. It covers topics like neural networks, deep learning, and natural language processing."
-            elif note_path.name == "ml_notes.md":
-                content = "# Machine Learning Notes\n\nThis note covers machine learning concepts including supervised learning, unsupervised learning, neural networks, and deep learning architectures."
-            elif note_path.name == "python_notes.md":
-                content = "# Python Programming Notes\n\nThis note discusses Python programming, data structures, algorithms, and software development practices. It includes examples of object-oriented programming."
-            else:
-                content = f"# {note_path.stem}\n\nThis is a test note."
-
-            dummy_embedding = torch.randn(768)
-            dummy_cache[str(note_path)] = (content, dummy_embedding)
-
-        return dummy_cache
 
     def show_main_interface(self) -> None:
         self.loading = False
@@ -590,12 +552,9 @@ class SearchApp(App):
         if not cache or self.loading:
             return
 
-        if self.test_mode:
-            results = self.perform_test_search(query)
-        else:
-            results = await asyncio.to_thread(
-                search, query, model, cache, max_results=self.MAX_RESULTS
-            )
+        results = await asyncio.to_thread(
+            search, query, model, cache, max_results=self.MAX_RESULTS
+        )
 
         self.current_results = results
         self.selected_index = 0
@@ -605,24 +564,6 @@ class SearchApp(App):
 
         if results:
             self.display_preview(0)
-
-    def perform_test_search(self, query: str) -> list:
-        global cache
-
-        if not query.strip() or not cache:
-            return []
-
-        results = []
-        query_lower = query.lower()
-
-        for path, (content, embedding) in cache.items():
-            content_lower = content.lower()
-            if query_lower in content_lower:
-                score = 0.8
-                results.append((score, path, content))
-
-        results.sort(key=lambda x: x[0], reverse=True)
-        return results[: self.MAX_RESULTS]
 
     def clear_results(self) -> None:
         self.current_results = []
@@ -931,23 +872,19 @@ class SearchApp(App):
 
     def toggle_app_mode(self) -> None:
         if self.app_mode == MODE_SEARCH:
-            if not self.test_mode:
-                global cache
-                note_count = len(cache) if cache else 0
+            global cache
+            note_count = len(cache) if cache else 0
 
-                def on_confirm(confirmed: bool | None) -> None:
-                    if confirmed:
-                        self.app_mode = MODE_ANALYZE
-                        self.switch_screen("analyze")
-                        self.call_later(self.scan_all_notes_for_wikilinks)
-                        self.call_later(self.update_mode_button)
+            def on_confirm(confirmed: bool | None) -> None:
+                if confirmed:
+                    self.app_mode = MODE_ANALYZE
+                    self.switch_screen("analyze")
+                    self.call_later(self.scan_all_notes_for_wikilinks)
+                    self.call_later(self.update_mode_button)
 
-                self.push_screen(ConfirmAnalyzeScreen(note_count), on_confirm)
-                return
+            self.push_screen(ConfirmAnalyzeScreen(note_count), on_confirm)
+            return
 
-            self.app_mode = MODE_ANALYZE
-            self.switch_screen("analyze")
-            self.call_later(self.scan_all_notes_for_wikilinks)
         else:
             self.app_mode = MODE_SEARCH
             self.switch_screen("search")
@@ -958,28 +895,6 @@ class SearchApp(App):
         global model, cache
 
         if not cache or self.loading:
-            return
-
-        if self.test_mode:
-            # Create dummy suggestions for test mode
-            dummy_suggestions = [
-                {
-                    "score": 0.8,
-                    "source_note": "test1.md",
-                    "candidate": "machine learning",
-                    "filename": "ml_notes.md",
-                    "note_content": "# Machine Learning Notes\n\nThis note covers machine learning concepts...",
-                    "wikilink": "[[ml_notes.md|machine learning]]",
-                    "source_note_path": str(self.get_notes_dir() / "test1.md"),
-                    "source_note_content": "This is a test note about [[ml_notes.md|machine learning]]...",
-                }
-            ]
-            self.all_analysis_suggestions = dummy_suggestions
-            self.selected_suggestion_index = 0
-            analyze_screen = cast(AnalyzeScreen, self.screen)
-            analyze_screen.display_all_analysis_results()
-            if dummy_suggestions:
-                analyze_screen.display_analysis_preview(0)
             return
 
         try:
@@ -1135,11 +1050,7 @@ class SearchApp(App):
             default="test_data",
             help="Directory containing note files (default: ./test_data)",
         )
-        parser.add_argument(
-            "--test-mode",
-            action="store_true",
-            help="Run in test mode with dummy data (no AI loading)",
-        )
+
         parser.add_argument(
             "--rebuild-cache",
             action="store_true",
@@ -1149,9 +1060,7 @@ class SearchApp(App):
             return parser.parse_args()
         except SystemExit:
             # During testing, pytest may pass unknown arguments, so return defaults
-            return argparse.Namespace(
-                notes_dir="test_data", test_mode=False, rebuild_cache=False
-            )
+            return argparse.Namespace(notes_dir="test_data", rebuild_cache=False)
 
     def update_mode_button(self) -> None:
         """Update mode button text based on current mode."""

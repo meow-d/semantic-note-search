@@ -20,11 +20,7 @@ def parse_arguments():
         default="test_data",
         help="Directory containing note files (default: ./test_data)",
     )
-    parser.add_argument(
-        "--test-mode",
-        action="store_true",
-        help="Run in test mode with dummy data (no AI loading)",
-    )
+
     parser.add_argument(
         "--rebuild-cache",
         action="store_true",
@@ -34,7 +30,7 @@ def parse_arguments():
         return parser.parse_args()
     except SystemExit:
         # During testing, pytest may pass unknown arguments, so return defaults
-        return argparse.Namespace(notes_dir="test_data", test_mode=False, rebuild_cache=False)
+        return argparse.Namespace(notes_dir="test_data", rebuild_cache=False)
 
 
 def main():
@@ -52,7 +48,6 @@ def main():
         sys.exit(1)
 
     app = SearchApp()
-    app.test_mode = args.test_mode  # Set test mode from arguments
     app.notes_dir = notes_dir  # Pass the validated notes directory
     app.run()
 

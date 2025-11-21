@@ -8,7 +8,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 # Add the src directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
+)
 
 from ui import SearchApp, SearchScreen, LoadingScreen, ConfirmAnalyzeScreen
 from config import MODE_SEARCH, MODE_ANALYZE
@@ -23,30 +25,19 @@ class TestArgumentParsing:
         """Test default argument values."""
         # Reset sys.argv
         original_argv = sys.argv.copy()
-        sys.argv = ['main.py']
+        sys.argv = ["main.py"]
 
         try:
             args = parse_arguments()
             assert args.notes_dir == "test_data"
-            assert args.test_mode is False
-        finally:
-            sys.argv = original_argv
-
-    def test_test_mode_flag(self):
-        """Test --test-mode flag parsing."""
-        original_argv = sys.argv.copy()
-        sys.argv = ['main.py', '--test-mode']
-
-        try:
-            args = parse_arguments()
-            assert args.test_mode is True
+            assert args.rebuild_cache is False
         finally:
             sys.argv = original_argv
 
     def test_custom_notes_dir(self):
         """Test custom notes directory argument."""
         original_argv = sys.argv.copy()
-        sys.argv = ['main.py', '/custom/path']
+        sys.argv = ["main.py", "/custom/path"]
 
         try:
             args = parse_arguments()
@@ -62,27 +53,8 @@ class TestAppComponents:
         """Test that the app can be initialized."""
         app = SearchApp()
         assert app is not None
-        assert hasattr(app, 'test_mode')
-        assert hasattr(app, 'create_test_cache')
-        assert hasattr(app, 'app_mode')
-
-    def test_test_cache_creation(self):
-        """Test that test cache is created correctly."""
-        app = SearchApp()
-        app.test_mode = True
-        cache = app.create_test_cache()
-
-        assert isinstance(cache, dict)
-        assert len(cache) == 3
-
-        # Check that actual test files are present
-        actual_files = ["test_data/test1.md", "test_data/ml_notes.md", "test_data/python_notes.md"]
-        for actual_file in actual_files:
-            assert actual_file in cache
-            content, embedding = cache[actual_file]
-            assert isinstance(content, str)
-            assert len(content) > 0
-            assert len(embedding) == 768  # BGE-base-en-v1.5 dimensions
+        assert hasattr(app, "test_mode")
+        assert hasattr(app, "app_mode")
 
     def test_mode_constants(self):
         """Test that mode constants are properly defined."""
@@ -102,12 +74,10 @@ class TestUITextualIntegration:
         # Check initial state without running the app
         assert app.test_mode is True
         assert app.app_mode == MODE_SEARCH  # Default mode
-        assert hasattr(app, 'create_test_cache')
 
     async def test_mode_switching_button_exists(self):
         """Test that mode switching button exists in the UI."""
         app = SearchApp()
-        app.test_mode = True
 
         async with app.run_test() as pilot:
             # Wait for app to initialize and switch to search screen
@@ -146,7 +116,7 @@ class TestUITextualIntegration:
             await pilot.pause()
 
             # App should have app_mode attribute
-            assert hasattr(pilot.app, 'app_mode')
+            assert hasattr(pilot.app, "app_mode")
 
     async def test_mode_button_text_updates(self):
         """Test that mode button text updates when mode changes."""
@@ -162,7 +132,7 @@ class TestUITextualIntegration:
 
             # Button should exist and have a label
             button = pilot.app.screen.query_one("#mode-btn")
-            assert hasattr(button, 'label')
+            assert hasattr(button, "label")
 
     async def test_loading_screen_elements_exist(self):
         """Test that loading screen has required elements."""
@@ -174,7 +144,7 @@ class TestUITextualIntegration:
         # The test passes if the screen can be instantiated
         assert screen is not None
 
-        assert hasattr(screen, 'update_progress')
+        assert hasattr(screen, "update_progress")
 
     async def test_main_interface_elements_exist(self):
         """Test that main interface has required elements after loading."""
