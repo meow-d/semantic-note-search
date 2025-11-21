@@ -39,26 +39,6 @@ First run will take a while as it'll need to download the sentence transformer m
 MIT License - feel free to use, modify, and distribute.
 
 ## Todo
-- [x] in the wikilink previews, top right, wikilinks are not applied. right now it's "This is a test note about artificial intelligence and machine learning.". it should be "This is a test note about [[ml_notes|artificial intelligence]] and machine learning."
-- [x] look into textual tui documentation on how to make text inside textarea highlighted. then, highllight the wikilink previews, everything between [[]]
-
-- [x] separate the textual css in separate .tcss file
-- [x] search ui should parse the results for the first h1 to use as title
-- [x] search ui removed [[ and ]] in wikilinks and highlights it. i only need the highlight, not removal
-- [x] remove test mode entirely
-- [x] update tests
-- [x] refactor: look through the codebase for any unfinished code or errors, finish or remove unused code
-- [x] are wikilink suggestions cached? if not, implement that feature
-- [x] wikilink suggestions: skip urls (https://), existing wikilinks, and headings (line starts with #)
-- [x] wikilink suggestions: markdown lists starts with `- `, don't include them. no `- anki`, just `anki`
-- [x] wikilink suggestions: wikilinks cannot contain newlines. take that into account when splitting candidates.
-- [x] performance isues with wikilink suggestions page with >10000 suggestions
-- [x] cmd line option to only include specific subdirectories
-- [x] wikilink suggestion: implement a button and shortcut to apply suggestion. shortcut: "ctrl+enter". button: "apply selected suggestion", located in the same section as the progress bar
-- [x] wikilink suggestions: split into new lines. `0.714  test1.md (Machine learning)\n   -> ml_notes.md (Machine Learning Notes)`
-- [x] scan progress section should be more compact - all in one line. scan progress bar, status, and the button.
-- [x] there's still no wikilink suggestions caching
-- [x] wikilink suggestions: the app currently removes existing wikilinks before applying, but i want it to take in account of that during the candicate splitting phase
 
 ### skip for now
 - [ ] type errors in ai.py

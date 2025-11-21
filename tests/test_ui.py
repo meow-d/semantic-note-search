@@ -12,7 +12,13 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
 )
 
-from ui import SearchApp, SearchScreen, LoadingScreen, ConfirmAnalyzeScreen
+from ui import (
+    SearchApp,
+    SearchScreen,
+    LoadingScreen,
+    ConfirmAnalyzeScreen,
+    AnalyzeScreen,
+)
 from config import MODE_SEARCH, MODE_ANALYZE
 from src.main import parse_arguments
 from textual.widgets import RichLog
