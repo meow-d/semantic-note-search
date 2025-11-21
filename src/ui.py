@@ -11,7 +11,16 @@ from textual.binding import Binding
 from textual.screen import Screen, ModalScreen
 
 from config import MODE_SEARCH, MODE_ANALYZE
-from ai import model, cache, load_model, get_all_notes, load_or_build_cache, analyze_text_for_wikilinks, search, load_spacy_model
+from ai import (
+    model,
+    cache,
+    load_model,
+    get_all_notes,
+    load_or_build_cache,
+    analyze_text_for_wikilinks,
+    search,
+    load_spacy_model,
+)
 
 
 class CustomInput(Input):
@@ -39,8 +48,6 @@ class LoadingScreen(Screen):
                     yield Label("Loading components...", id="loading-status")
                     yield ProgressBar(id="loading-progress", total=100)
 
-
-
     def update_status(self, status: str):
         self.query_one("#loading-status", Label).update(status)
 
@@ -55,13 +62,12 @@ class LoadingScreen(Screen):
 
 
 class SearchScreen(Screen):
-
     def compose(self) -> ComposeResult:
         with Vertical(classes="main-container"):
             with Horizontal(classes="top-bar"):
                 yield Label("🔍 Semantic Search", id="mode-label")
                 yield Button("Analyze", id="mode-btn", classes="mode-button")
-            
+
             with Horizontal(classes="content-container", id="search-layout"):
                 with Vertical(classes="search-results-panel"):
                     yield RichLog(id="results", auto_scroll=False, markup=True)
@@ -74,7 +80,9 @@ class SearchScreen(Screen):
                     )
 
             with Horizontal(classes="search-container"):
-                yield CustomInput(placeholder="Enter search query...", id="search-input")
+                yield CustomInput(
+                    placeholder="Enter search query...", id="search-input"
+                )
 
     def on_mount(self):
         self.focus_input()
@@ -131,13 +139,12 @@ class SearchScreen(Screen):
 
 
 class AnalyzeScreen(Screen):
-
     def compose(self) -> ComposeResult:
         with Vertical(classes="main-container"):
             with Horizontal(classes="top-bar"):
                 yield Label("📝 Analyze Mode", id="mode-label")
                 yield Button("Search", id="mode-btn", classes="mode-button")
-            
+
             with Vertical(classes="analyze-container", id="analyze-layout"):
                 with Vertical(id="analyze-progress-section"):
                     yield Label("Scan Progress", id="progress-label")
@@ -146,7 +153,9 @@ class AnalyzeScreen(Screen):
 
                 with Horizontal(classes="analyze-main-content"):
                     with Vertical(classes="analyze-suggestions-panel"):
-                        yield RichLog(id="analyze-results", auto_scroll=False, markup=True)
+                        yield RichLog(
+                            id="analyze-results", auto_scroll=False, markup=True
+                        )
                     with Vertical(classes="analyze-preview-container"):
                         with Vertical(classes="analyze-source-panel"):
                             yield TextArea(
@@ -179,10 +188,10 @@ class AnalyzeScreen(Screen):
             print(f"Error updating progress: {e}")
 
     def get_note_title(self, content, filename):
-        lines = content.split('\n')
+        lines = content.split("\n")
         for line in lines:
             line = line.strip()
-            if line.startswith('# '):
+            if line.startswith("# "):
                 return line[2:].strip()
         return Path(filename).stem
 
@@ -196,7 +205,9 @@ class AnalyzeScreen(Screen):
                 results_log.write("No wikilink suggestions found")
                 return
 
-            results_log.write(f"[bold #cd5c5c]Wikilink Suggestions for All Notes[/bold #cd5c5c]")
+            results_log.write(
+                f"[bold #cd5c5c]Wikilink Suggestions for All Notes[/bold #cd5c5c]"
+            )
             results_log.write("")
             results_log.write(f"Found {len(app.all_analysis_suggestions)} suggestions")
             results_log.write("")
@@ -204,16 +215,22 @@ class AnalyzeScreen(Screen):
             results_log.write("")
 
             for i, suggestion in enumerate(app.all_analysis_suggestions):
-                score = suggestion['score']
-                source_note = suggestion['source_note']
-                candidate = suggestion['candidate']
-                target_title = self.get_note_title(suggestion['note_content'], suggestion['filename'])
+                score = suggestion["score"]
+                source_note = suggestion["source_note"]
+                candidate = suggestion["candidate"]
+                target_title = self.get_note_title(
+                    suggestion["note_content"], suggestion["filename"]
+                )
                 is_selected = i == app.selected_suggestion_index
 
                 if is_selected:
-                    results_log.write(f"[bold #f5dede on #5d2828]{score:.3f}  {source_note} ({candidate}) -> {suggestion['filename']} ({target_title})[/]")
+                    results_log.write(
+                        f"[bold #f5dede on #5d2828]{score:.3f}  {source_note} ({candidate}) -> {suggestion['filename']} ({target_title})[/]"
+                    )
                 else:
-                    results_log.write(f"[#cd5c5c]{score:.3f}  {source_note} ({candidate}) -> {suggestion['filename']} ({target_title})")
+                    results_log.write(
+                        f"[#cd5c5c]{score:.3f}  {source_note} ({candidate}) -> {suggestion['filename']} ({target_title})"
+                    )
                 results_log.write("")
 
         except Exception as e:
@@ -233,38 +250,49 @@ class AnalyzeScreen(Screen):
                 return
 
             suggestion = app.all_analysis_suggestions[index]
-            source_note_path = suggestion['source_note_path']
+            source_note_path = suggestion["source_note_path"]
 
             global cache
             if cache and source_note_path in cache:
                 full_source_content = cache[source_note_path][0]
             else:
-                full_source_content = suggestion['source_note_content']
+                full_source_content = suggestion["source_note_content"]
 
             # Insert the suggested wikilink into the source content
-            wikilink = suggestion['wikilink']
-            candidate = suggestion['candidate']
+            wikilink = suggestion["wikilink"]
+            candidate = suggestion["candidate"]
             # Replace the first occurrence of the candidate with the wikilink syntax
-            modified_source_content = full_source_content.replace(candidate, wikilink, 1)
+            modified_source_content = full_source_content.replace(
+                candidate, wikilink, 1
+            )
 
             # For preview, show the raw [[ ]] syntax without processing existing wikilinks
             source_area.load_text(modified_source_content)
 
             # Highlight the inserted wikilink
-            app.add_wikilink_highlights(source_area, modified_source_content, modified_source_content)
+            app.add_wikilink_highlights(
+                source_area, modified_source_content, modified_source_content
+            )
 
             # Find the position of the suggested wikilink in the content for cursor positioning
             import re
-            wikilink_match = re.match(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]', suggestion['wikilink'])
+
+            wikilink_match = re.match(
+                r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]", suggestion["wikilink"]
+            )
             match = None
             if wikilink_match:
                 link_target = wikilink_match.group(1)
-                display_text = wikilink_match.group(2) if wikilink_match.group(2) else link_target
+                display_text = (
+                    wikilink_match.group(2) if wikilink_match.group(2) else link_target
+                )
                 display_pattern = re.compile(re.escape(display_text), re.IGNORECASE)
                 match = display_pattern.search(modified_source_content)
-            lines_before = modified_source_content[:match.start()].count('\n') if match else 0
+            lines_before = (
+                modified_source_content[: match.start()].count("\n") if match else 0
+            )
 
-            linked_filename = suggestion['filename']
+            linked_filename = suggestion["filename"]
             target_content = ""
 
             if cache:
@@ -284,7 +312,9 @@ class AnalyzeScreen(Screen):
 
             processed_target_content = app.process_wikilinks_for_display(target_content)
             target_area.load_text(processed_target_content)
-            app.add_wikilink_highlights(target_area, target_content, processed_target_content)
+            app.add_wikilink_highlights(
+                target_area, target_content, processed_target_content
+            )
 
             if match:
                 source_area.move_cursor((lines_before + 5, 0))
@@ -307,8 +337,14 @@ class ConfirmAnalyzeScreen(ModalScreen[bool]):
         with Vertical(id="confirm-dialog"):
             yield Label(f"Warning: Analyze Mode Scan Confirmation", id="confirm-title")
             yield Label("")
-            yield Label(f"This will scan {self.note_count} notes for wikilink suggestions.", id="confirm-message")
-            yield Label("This process may take several minutes depending on the number of notes.", id="confirm-warning")
+            yield Label(
+                f"This will scan {self.note_count} notes for wikilink suggestions.",
+                id="confirm-message",
+            )
+            yield Label(
+                "This process may take several minutes depending on the number of notes.",
+                id="confirm-warning",
+            )
             yield Label("")
             with Horizontal(id="confirm-buttons"):
                 yield Button("Cancel", id="cancel-btn", variant="default")
@@ -320,45 +356,15 @@ class ConfirmAnalyzeScreen(ModalScreen[bool]):
         elif event.button.id == "cancel-btn":
             self.dismiss(False)
 
-    CSS = """
-    #confirm-dialog {
-        width: 80;
-        height: auto;
-        border: thick $primary;
-        background: $surface;
-        padding: 2;
-        align: center middle;
-    }
-
-    #confirm-title {
-        text-align: center;
-        color: $primary;
-        text-style: bold;
-    }
-
-    #confirm-message, #confirm-warning {
-        text-align: center;
-        margin: 0 1;
-    }
-
-    #confirm-buttons {
-        align: center middle;
-        margin-top: 1;
-    }
-
-    #confirm-buttons Button {
-        margin: 0 1;
-        min-width: 12;
-    }
-    """
-
 
 class SearchApp(App):
+    CSS_PATH = "styles.tcss"
 
     def process_wikilinks_for_display(self, content: str) -> str:
         """Replace wikilink syntax with display text for preview rendering."""
         import re
-        pattern = re.compile(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]')
+
+        pattern = re.compile(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
 
         def replace_match(match):
             link_target = match.group(1)
@@ -367,200 +373,24 @@ class SearchApp(App):
 
         return pattern.sub(replace_match, content)
 
-    def add_wikilink_highlights(self, text_area: TextArea, original_content: str, processed_content: str) -> None:
+    def add_wikilink_highlights(
+        self, text_area: TextArea, original_content: str, processed_content: str
+    ) -> None:
         """Add syntax highlights for wikilinks in the given TextArea based on processed content."""
         import re
-        pattern = re.compile(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]')
-        original_lines = original_content.split('\n')
-        processed_lines = processed_content.split('\n')
 
-        for line_idx, (orig_line, proc_line) in enumerate(zip(original_lines, processed_lines)):
+        pattern = re.compile(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
+        original_lines = original_content.split("\n")
+        processed_lines = processed_content.split("\n")
+
+        for line_idx, (orig_line, proc_line) in enumerate(
+            zip(original_lines, processed_lines)
+        ):
             for match in pattern.finditer(orig_line):
                 # Highlight the entire [[ ]] wikilink syntax
                 start_pos = match.start()
                 end_pos = match.end()
                 text_area._highlights[line_idx].append((start_pos, end_pos, "link.uri"))
-
-    CSS = """
-    Screen { background: #1a0d0d; }
-    .main-container { height: 100%; }
-    .top-bar {
-        height: 3;
-        background: #2d1414;
-        border: solid #8b3a3a;
-        margin: 1 1 0 1;
-        padding: 0 1;
-        align: center middle;
-    }
-    #mode-label {
-        color: #f5dede;
-        text-style: bold;
-        width: 1fr;
-    }
-    .content-container { height: 1fr; }
-    .search-results-panel {
-        width: 1fr;
-        border: solid #8b3a3a;
-        margin: 0 1 0 1;
-        background: #2d1414;
-    }
-    .search-preview-panel {
-        width: 1fr;
-        border: solid #cd5c5c;
-        margin: 0 1 0 0;
-        background: #2d1414;
-    }
-    .analyze-container {
-        height: 1fr;
-        background: #2d1414;
-    }
-    #analyze-progress-section {
-        height: auto;
-        background: #2d1414;
-        border: solid #8b3a3a;
-        margin: 0 1 1 1;
-        padding: 1;
-    }
-    #progress-label {
-        text-align: center;
-        color: $primary;
-        text-style: bold;
-    }
-    #analyze-progress {
-        width: 1fr;
-        margin: 0 2;
-    }
-    #progress-status {
-        text-align: center;
-        color: $text-muted;
-        margin-top: 1;
-    }
-    .analyze-main-content {
-        height: 1fr;
-    }
-    .analyze-suggestions-panel {
-        width: 1fr;
-        margin: 0 1 0 1;
-        background: #2d1414;
-    }
-    .analyze-preview-container {
-        width: 1fr;
-        height: 1fr;
-        margin: 0 1 0 0;
-        background: #2d1414;
-    }
-    .analyze-source-panel {
-        height: 1fr;
-        margin: 0 0 1 0;
-        background: #2d1414;
-    }
-    .analyze-target-panel {
-        height: 1fr;
-        margin: 1 0 0 0;
-        background: #2d1414;
-    }
-    #source-label, #target-label {
-        text-align: center;
-        color: $primary;
-        text-style: bold;
-        margin: 0 0 1 0;
-    }
-    #analyze-source, #analyze-target {
-        height: 1fr;
-        scrollbar-size: 1 1;
-        color: #f5dede;
-        background: #2d1414;
-        overflow-y: auto;
-        border: solid #8b3a3a;
-    }
-    .search-container {
-        height: auto;
-        background: #2d1414;
-        padding: 0 1;
-        margin: 0 1 1 1;
-        align: center middle;
-    }
-    #search-input {
-        width: 1fr;
-        height: 3;
-        min-height: 3;
-        color: #f5dede;
-        background: #2d1414;
-        border: solid #8b3a3a;
-        padding: 0 1;
-    }
-    #search-input:focus {
-        border: solid #cd5c5c;
-    }
-    .mode-button {
-        width: 10;
-        min-width: 10;
-        margin: 0;
-        padding: 0;
-        border: none;
-        color: #f5dede;
-        background: #8b3a3a;
-        text-align: center;
-    }
-    .mode-button:hover {
-        background: #a14d4d;
-    }
-    .mode-button:focus {
-        background: #a14d4d;
-    }
-    #results, #analyze-results {
-        height: 100%;
-        scrollbar-size: 1 1;
-        color: #f5dede;
-        overflow-y: auto;
-    }
-    #preview {
-        height: 100%;
-        scrollbar-size: 1 1;
-        color: #f5dede;
-        background: #2d1414;
-        overflow-y: auto;
-    }
-    .selected-result { background: #5d2828; }
-    #loading-screen {
-        width: 100%;
-        height: 100%;
-        background: #1a0d0d;
-        align: center middle;
-    }
-    #loading-content {
-        width: auto;
-        height: auto;
-        background: transparent;
-        padding: 2;
-        align: center middle;
-    }
-    #loading-title {
-        text-align: center;
-        color: #f5dede;
-        text-style: bold;
-        margin-bottom: 1;
-    }
-    #loading-subtitle {
-        text-align: center;
-        color: #cd5c5c;
-        margin-bottom: 2;
-    }
-    #loading-progress-section {
-        width: 100%;
-        align: center middle;
-    }
-    #loading-status {
-        text-align: center;
-        color: #f5dede;
-        margin-bottom: 1;
-    }
-    #loading-progress {
-        width: 50;
-        margin: 1 0;
-    }
-
-    """
 
     SCREENS = {
         "loading": LoadingScreen,
@@ -613,15 +443,16 @@ class SearchApp(App):
                 loading_screen.update_status("Checking GPU availability...")
                 loading_screen.update_progress(5)
                 await self.force_ui_update()
-                
+
                 from ai import get_gpu_status
+
                 gpu_status = get_gpu_status()
-                
-                if gpu_status['available']:
+
+                if gpu_status["available"]:
                     subtitle = f"🚀 Using GPU: {gpu_status['device_name']}"
                 else:
                     subtitle = "💻 Using CPU (install CUDA for GPU acceleration)"
-                
+
                 loading_screen.update_subtitle(subtitle)
                 loading_screen.update_progress(10)
                 await self.force_ui_update()
@@ -632,7 +463,9 @@ class SearchApp(App):
 
                 model = load_model()
                 if model is None:
-                    raise Exception("Failed to load AI model. Please check your installation and try again.")
+                    raise Exception(
+                        "Failed to load AI model. Please check your installation and try again."
+                    )
                 loading_screen.update_progress(40)
                 await self.force_ui_update()
 
@@ -655,8 +488,13 @@ class SearchApp(App):
                     loading_screen.update_status(status)
 
                 import ai
+
                 ai_cache, cache_status = await load_or_build_cache(
-                    model, current_note_paths, self.get_notes_dir(), args.rebuild_cache, progress_callback=progress_callback
+                    model,
+                    current_note_paths,
+                    self.get_notes_dir(),
+                    args.rebuild_cache,
+                    progress_callback=progress_callback,
                 )
                 cache = ai_cache
                 loading_screen.update_progress(95)
@@ -667,6 +505,7 @@ class SearchApp(App):
 
                 model = None
                 import ai
+
                 ai.cache = self.create_test_cache()
                 loading_screen.update_progress(75)
                 await self.force_ui_update()
@@ -686,7 +525,7 @@ class SearchApp(App):
     def create_test_cache(self):
         import torch
         from ai import get_all_notes
-        
+
         notes_dir = self.get_notes_dir()
         actual_notes = get_all_notes(notes_dir)
         dummy_cache = {}
@@ -700,7 +539,7 @@ class SearchApp(App):
                 content = "# Python Programming Notes\n\nThis note discusses Python programming, data structures, algorithms, and software development practices. It includes examples of object-oriented programming."
             else:
                 content = f"# {note_path.stem}\n\nThis is a test note."
-            
+
             dummy_embedding = torch.randn(768)
             dummy_cache[str(note_path)] = (content, dummy_embedding)
 
@@ -718,7 +557,7 @@ class SearchApp(App):
         results_log.clear()
 
         cache_size = len(cache) if cache else 0
-        
+
         if cache and len(cache) > 0:
             results_log.write(
                 f"[bold #cd5c5c]Ready![/bold #cd5c5c] {len(cache)} notes indexed"
@@ -754,7 +593,9 @@ class SearchApp(App):
         if self.test_mode:
             results = self.perform_test_search(query)
         else:
-            results = await asyncio.to_thread(search, query, model, cache, max_results=self.MAX_RESULTS)
+            results = await asyncio.to_thread(
+                search, query, model, cache, max_results=self.MAX_RESULTS
+            )
 
         self.current_results = results
         self.selected_index = 0
@@ -781,7 +622,7 @@ class SearchApp(App):
                 results.append((score, path, content))
 
         results.sort(key=lambda x: x[0], reverse=True)
-        return results[:self.MAX_RESULTS]
+        return results[: self.MAX_RESULTS]
 
     def clear_results(self) -> None:
         self.current_results = []
@@ -797,7 +638,9 @@ class SearchApp(App):
 
     def display_results(self) -> None:
         try:
-            results_id = "#results" if self.app_mode == MODE_SEARCH else "#analyze-results"
+            results_id = (
+                "#results" if self.app_mode == MODE_SEARCH else "#analyze-results"
+            )
             results_log = self.screen.query_one(results_id, RichLog)
             results_log.clear()
 
@@ -862,33 +705,43 @@ class SearchApp(App):
         log.write("")
 
         if query:
-            log.write(f'[bold #cd5c5c]Found {len(self.current_results)} wikilink suggestions for "{query}"[/bold #cd5c5c]')
+            log.write(
+                f'[bold #cd5c5c]Found {len(self.current_results)} wikilink suggestions for "{query}"[/bold #cd5c5c]'
+            )
         else:
-            log.write(f"[bold #cd5c5c]Found {len(self.current_results)} wikilink suggestions[/bold #cd5c5c]")
+            log.write(
+                f"[bold #cd5c5c]Found {len(self.current_results)} wikilink suggestions[/bold #cd5c5c]"
+            )
         log.write("")
 
     def get_note_title(self, content, filename):
-        lines = content.split('\n')
+        lines = content.split("\n")
         for line in lines:
             line = line.strip()
-            if line.startswith('# '):
+            if line.startswith("# "):
                 return line[2:].strip()
         return Path(filename).stem
 
     def write_wikilink_suggestions(self, log):
-        if hasattr(self, 'current_suggestions') and self.current_suggestions:
+        if hasattr(self, "current_suggestions") and self.current_suggestions:
             for i, suggestion in enumerate(self.current_suggestions):
-                score = suggestion['score']
-                candidate = suggestion['candidate']
-                filename = suggestion['filename']
-                source_note = suggestion.get('source_note', 'Unknown')
-                target_title = self.get_note_title(suggestion.get('note_content', ''), filename)
+                score = suggestion["score"]
+                candidate = suggestion["candidate"]
+                filename = suggestion["filename"]
+                source_note = suggestion.get("source_note", "Unknown")
+                target_title = self.get_note_title(
+                    suggestion.get("note_content", ""), filename
+                )
                 is_selected = i == self.selected_index
 
                 if is_selected:
-                    log.write(f"[bold #f5dede on #5d2828]{score:.3f}  {source_note} ({candidate}) -> {filename} ({target_title})[/]")
+                    log.write(
+                        f"[bold #f5dede on #5d2828]{score:.3f}  {source_note} ({candidate}) -> {filename} ({target_title})[/]"
+                    )
                 else:
-                    log.write(f"[#cd5c5c]{score:.3f}  {source_note} ({candidate}) -> {filename} ({target_title})")
+                    log.write(
+                        f"[#cd5c5c]{score:.3f}  {source_note} ({candidate}) -> {filename} ({target_title})"
+                    )
 
                 log.write("")
         else:
@@ -946,10 +799,16 @@ class SearchApp(App):
                 return
 
             # Get the current note info
-            if self.current_results and 0 <= self.selected_index < len(self.current_results):
-                score, note_path, note_content = self.current_results[self.selected_index]
+            if self.current_results and 0 <= self.selected_index < len(
+                self.current_results
+            ):
+                score, note_path, note_content = self.current_results[
+                    self.selected_index
+                ]
                 filename = Path(note_path).name
-                results_log.write(f"[bold #cd5c5c]Wikilink suggestions for: {filename}[/bold #cd5c5c]")
+                results_log.write(
+                    f"[bold #cd5c5c]Wikilink suggestions for: {filename}[/bold #cd5c5c]"
+                )
             else:
                 results_log.write("[bold #cd5c5c]Wikilink suggestions[/bold #cd5c5c]")
 
@@ -958,11 +817,15 @@ class SearchApp(App):
             results_log.write("")
 
             # Display wikilink suggestions
-            for i, (score, filename, wikilink) in enumerate(self.current_analysis_results):
+            for i, (score, filename, wikilink) in enumerate(
+                self.current_analysis_results
+            ):
                 is_selected = i == self.selected_suggestion_index
 
                 if is_selected:
-                    results_log.write(f"[bold #f5dede on #5d2828]{score:.3f}  {wikilink}[/]")
+                    results_log.write(
+                        f"[bold #f5dede on #5d2828]{score:.3f}  {wikilink}[/]"
+                    )
                 else:
                     results_log.write(f"[#cd5c5c]{score:.3f}  {wikilink}")
 
@@ -1020,10 +883,13 @@ class SearchApp(App):
                     return
 
                 if event.key == "up":
-                    self.selected_suggestion_index = max(0, self.selected_suggestion_index - 1)
+                    self.selected_suggestion_index = max(
+                        0, self.selected_suggestion_index - 1
+                    )
                 else:
                     self.selected_suggestion_index = min(
-                        len(self.all_analysis_suggestions) - 1, self.selected_suggestion_index + 1
+                        len(self.all_analysis_suggestions) - 1,
+                        self.selected_suggestion_index + 1,
                     )
 
                 analyze_screen = cast(AnalyzeScreen, self.screen)
@@ -1037,7 +903,9 @@ class SearchApp(App):
         async def do_search():
             await self.perform_search(query)
 
-        self._search_timer = self.set_timer(0.3, lambda: asyncio.create_task(do_search()))
+        self._search_timer = self.set_timer(
+            0.3, lambda: asyncio.create_task(do_search())
+        )
 
     def on_rich_log_click(self, event) -> None:
         if not self.current_results or self.loading:
@@ -1087,7 +955,7 @@ class SearchApp(App):
         else:
             self.app_mode = MODE_SEARCH
             self.switch_screen("search")
-        
+
         self.call_later(self.update_mode_button)
 
     async def scan_all_notes_for_wikilinks(self) -> None:
@@ -1100,14 +968,14 @@ class SearchApp(App):
             # Create dummy suggestions for test mode
             dummy_suggestions = [
                 {
-                    'score': 0.8,
-                    'source_note': 'test1.md',
-                    'candidate': 'machine learning',
-                    'filename': 'ml_notes.md',
-                    'note_content': '# Machine Learning Notes\n\nThis note covers machine learning concepts...',
-                    'wikilink': '[[ml_notes.md|machine learning]]',
-                    'source_note_path': str(self.get_notes_dir() / 'test1.md'),
-                    'source_note_content': 'This is a test note about [[ml_notes.md|machine learning]]...'
+                    "score": 0.8,
+                    "source_note": "test1.md",
+                    "candidate": "machine learning",
+                    "filename": "ml_notes.md",
+                    "note_content": "# Machine Learning Notes\n\nThis note covers machine learning concepts...",
+                    "wikilink": "[[ml_notes.md|machine learning]]",
+                    "source_note_path": str(self.get_notes_dir() / "test1.md"),
+                    "source_note_content": "This is a test note about [[ml_notes.md|machine learning]]...",
                 }
             ]
             self.all_analysis_suggestions = dummy_suggestions
@@ -1122,7 +990,9 @@ class SearchApp(App):
             analyze_screen = cast(AnalyzeScreen, self.screen)
 
             total_notes = len(cache)
-            analyze_screen.update_progress(0, f"Preparing to scan {total_notes} notes...")
+            analyze_screen.update_progress(
+                0, f"Preparing to scan {total_notes} notes..."
+            )
 
             all_suggestions = []
             processed_count = 0
@@ -1131,27 +1001,37 @@ class SearchApp(App):
                 filename = Path(note_path).name
 
                 progress_percent = int((processed_count / total_notes) * 100)
-                analyze_screen.update_progress(progress_percent, f"Analyzing: {filename}")
+                analyze_screen.update_progress(
+                    progress_percent, f"Analyzing: {filename}"
+                )
 
                 nlp = load_spacy_model()
-                suggestions = analyze_text_for_wikilinks(note_content, model, cache, nlp, note_path)
+                suggestions = analyze_text_for_wikilinks(
+                    note_content, model, cache, nlp, note_path
+                )
 
                 for suggestion in suggestions:
-                    suggestion['source_note'] = filename
-                    suggestion['source_note_path'] = note_path
-                    suggestion['source_note_content'] = note_content[:200] + "..." if len(note_content) > 200 else note_content
+                    suggestion["source_note"] = filename
+                    suggestion["source_note_path"] = note_path
+                    suggestion["source_note_content"] = (
+                        note_content[:200] + "..."
+                        if len(note_content) > 200
+                        else note_content
+                    )
 
                 all_suggestions.extend(suggestions)
                 processed_count += 1
 
                 await asyncio.sleep(0.01)
 
-            all_suggestions.sort(key=lambda x: x['score'], reverse=True)
+            all_suggestions.sort(key=lambda x: x["score"], reverse=True)
 
             self.all_analysis_suggestions = all_suggestions
             self.selected_suggestion_index = 0
 
-            analyze_screen.update_progress(100, f"Scan complete! Found {len(all_suggestions)} suggestions")
+            analyze_screen.update_progress(
+                100, f"Scan complete! Found {len(all_suggestions)} suggestions"
+            )
             await asyncio.sleep(1.0)
 
             analyze_screen = cast(AnalyzeScreen, self.screen)
@@ -1184,9 +1064,13 @@ class SearchApp(App):
             score, note_path, note_content = self.current_results[current_index]
 
             nlp = load_spacy_model()
-            suggestions = analyze_text_for_wikilinks(note_content, model, cache, nlp, note_path)
+            suggestions = analyze_text_for_wikilinks(
+                note_content, model, cache, nlp, note_path
+            )
 
-            self.current_analysis_results = [(s['score'], s['filename'], s['wikilink']) for s in suggestions]
+            self.current_analysis_results = [
+                (s["score"], s["filename"], s["wikilink"]) for s in suggestions
+            ]
             self.current_suggestions = suggestions
             self.selected_suggestion_index = 0
 
@@ -1220,26 +1104,32 @@ class SearchApp(App):
         async def do_analysis():
             await self.analyze_text(query)
 
-        self._analysis_timer = self.set_timer(0.3, lambda: asyncio.create_task(do_analysis()))
+        self._analysis_timer = self.set_timer(
+            0.3, lambda: asyncio.create_task(do_analysis())
+        )
 
     # Properties for constants
     @property
     def MAX_RESULTS(self):
         from config import MAX_RESULTS
+
         return MAX_RESULTS
 
     @property
     def SCORE_THRESHOLD(self):
         from config import SCORE_THRESHOLD
+
         return SCORE_THRESHOLD
 
     @property
     def MODEL_NAME(self):
         from config import MODEL_NAME
+
         return MODEL_NAME
 
     def parse_arguments(self):
         import argparse
+
         parser = argparse.ArgumentParser(
             description="Semantic note search using Sentence Transformers"
         )
@@ -1263,7 +1153,9 @@ class SearchApp(App):
             return parser.parse_args()
         except SystemExit:
             # During testing, pytest may pass unknown arguments, so return defaults
-            return argparse.Namespace(notes_dir="test_data", test_mode=False, rebuild_cache=False)
+            return argparse.Namespace(
+                notes_dir="test_data", test_mode=False, rebuild_cache=False
+            )
 
     def update_mode_button(self) -> None:
         """Update mode button text based on current mode."""

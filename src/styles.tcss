@@ -1,0 +1,207 @@
+Screen { background: #1a0d0d; }
+.main-container { height: 100%; }
+.top-bar {
+    height: 3;
+    background: #2d1414;
+    border: solid #8b3a3a;
+    margin: 1 1 0 1;
+    padding: 0 1;
+    align: center middle;
+}
+#mode-label {
+    color: #f5dede;
+    text-style: bold;
+    width: 1fr;
+}
+.content-container { height: 1fr; }
+.search-results-panel {
+    width: 1fr;
+    border: solid #8b3a3a;
+    margin: 0 1 0 1;
+    background: #2d1414;
+}
+.search-preview-panel {
+    width: 1fr;
+    border: solid #cd5c5c;
+    margin: 0 1 0 0;
+    background: #2d1414;
+}
+.analyze-container {
+    height: 1fr;
+    background: #2d1414;
+}
+#analyze-progress-section {
+    height: auto;
+    background: #2d1414;
+    border: solid #8b3a3a;
+    margin: 0 1 1 1;
+    padding: 1;
+}
+#progress-label {
+    text-align: center;
+    color: $primary;
+    text-style: bold;
+}
+#analyze-progress {
+    width: 1fr;
+    margin: 0 2;
+}
+#progress-status {
+    text-align: center;
+    color: $text-muted;
+    margin-top: 1;
+}
+.analyze-main-content {
+    height: 1fr;
+}
+.analyze-suggestions-panel {
+    width: 1fr;
+    margin: 0 1 0 1;
+    background: #2d1414;
+}
+.analyze-preview-container {
+    width: 1fr;
+    height: 1fr;
+    margin: 0 1 0 0;
+    background: #2d1414;
+}
+.analyze-source-panel {
+    height: 1fr;
+    margin: 0 0 1 0;
+    background: #2d1414;
+}
+.analyze-target-panel {
+    height: 1fr;
+    margin: 1 0 0 0;
+    background: #2d1414;
+}
+#source-label, #target-label {
+    text-align: center;
+    color: $primary;
+    text-style: bold;
+    margin: 0 0 1 0;
+}
+#analyze-source, #analyze-target {
+    height: 1fr;
+    scrollbar-size: 1 1;
+    color: #f5dede;
+    background: #2d1414;
+    overflow-y: auto;
+    border: solid #8b3a3a;
+}
+.search-container {
+    height: auto;
+    background: #2d1414;
+    padding: 0 1;
+    margin: 0 1 1 1;
+    align: center middle;
+}
+#search-input {
+    width: 1fr;
+    height: 3;
+    min-height: 3;
+    color: #f5dede;
+    background: #2d1414;
+    border: solid #8b3a3a;
+    padding: 0 1;
+}
+#search-input:focus {
+    border: solid #cd5c5c;
+}
+.mode-button {
+    width: 10;
+    min-width: 10;
+    margin: 0;
+    padding: 0;
+    border: none;
+    color: #f5dede;
+    background: #8b3a3a;
+    text-align: center;
+}
+.mode-button:hover {
+    background: #a14d4d;
+}
+.mode-button:focus {
+    background: #a14d4d;
+}
+#results, #analyze-results {
+    height: 100%;
+    scrollbar-size: 1 1;
+    color: #f5dede;
+    overflow-y: auto;
+}
+#preview {
+    height: 100%;
+    scrollbar-size: 1 1;
+    color: #f5dede;
+    background: #2d1414;
+    overflow-y: auto;
+}
+.selected-result { background: #5d2828; }
+#loading-screen {
+    width: 100%;
+    height: 100%;
+    background: #1a0d0d;
+    align: center middle;
+}
+#loading-content {
+    width: auto;
+    height: auto;
+    background: transparent;
+    padding: 2;
+    align: center middle;
+}
+#loading-title {
+    text-align: center;
+    color: #f5dede;
+    text-style: bold;
+    margin-bottom: 1;
+}
+#loading-subtitle {
+    text-align: center;
+    color: #cd5c5c;
+    margin-bottom: 2;
+}
+#loading-progress-section {
+    width: 100%;
+    align: center middle;
+}
+#loading-status {
+    text-align: center;
+    color: #f5dede;
+    margin-bottom: 1;
+}
+#loading-progress {
+    width: 50;
+    margin: 1 0;
+}
+
+#confirm-dialog {
+    width: 80;
+    height: auto;
+    border: thick $primary;
+    background: $surface;
+    padding: 2;
+    align: center middle;
+}
+
+#confirm-title {
+    text-align: center;
+    color: $primary;
+    text-style: bold;
+}
+
+#confirm-message, #confirm-warning {
+    text-align: center;
+    margin: 0 1;
+}
+
+#confirm-buttons {
+    align: center middle;
+    margin-top: 1;
+}
+
+#confirm-buttons Button {
+    margin: 0 1;
+    min-width: 12;
+}
