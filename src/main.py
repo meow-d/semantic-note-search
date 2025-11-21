@@ -26,6 +26,10 @@ def parse_arguments():
         action="store_true",
         help="Force rebuild the search cache from scratch",
     )
+    parser.add_argument(
+        "--include-subdirs",
+        help="Comma-separated list of subdirectories to include (relative to notes_dir)",
+    )
     try:
         return parser.parse_args()
     except SystemExit:
@@ -37,8 +41,11 @@ def main():
     """Main application entry point."""
     args = parse_arguments()
     notes_dir = Path(args.notes_dir)
+    include_subdirs = args.include_subdirs.split(",") if args.include_subdirs else None
 
     print(f"Using notes directory: {notes_dir}")
+    if include_subdirs:
+        print(f"Including subdirectories: {include_subdirs}")
 
     if not notes_dir.is_dir():
         print(f"Error: Notes directory not found at '{notes_dir}'")
@@ -49,6 +56,7 @@ def main():
 
     app = SearchApp()
     app.notes_dir = notes_dir  # Pass the validated notes directory
+    app.include_subdirs = include_subdirs
     app.run()
 
 

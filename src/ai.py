@@ -96,13 +96,23 @@ def load_model() -> Optional[SentenceTransformer]:
         return model
 
 
-def get_all_notes(directory: Path) -> List[Path]:
-    """Get all note files from the directory."""
+def get_all_notes(
+    directory: Path, include_subdirs: Optional[List[str]] = None
+) -> List[Path]:
+    """Get all note files from the directory, optionally filtering by subdirectories."""
     if not directory.is_dir():
         raise SystemExit(1)
 
     notes = []
     for root, _, files in os.walk(directory):
+        rel_root = Path(root).relative_to(directory)
+        if include_subdirs and include_subdirs != [""]:
+            # Check if this root is in one of the included subdirs
+            if not any(
+                str(rel_root).startswith(subdir) or subdir in str(rel_root)
+                for subdir in include_subdirs
+            ):
+                continue
         for file in files:
             if Path(file).suffix.lower() in {".txt", ".md"}:
                 notes.append(Path(root) / file)

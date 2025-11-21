@@ -2,7 +2,7 @@
 
 import asyncio
 from pathlib import Path
-from typing import cast
+from typing import cast, List
 
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
@@ -410,6 +410,7 @@ class SearchApp(App):
         self.suggestions_cache = None
         self.test_mode = False
         self._notes_dir: Path | None = None
+        self.include_subdirs: List[str] | None = None
 
     def compose(self) -> ComposeResult:
         return
@@ -471,7 +472,7 @@ class SearchApp(App):
             loading_screen.update_progress(50)
             await self.force_ui_update()
 
-            current_notes = get_all_notes(self.get_notes_dir())
+            current_notes = get_all_notes(self.get_notes_dir(), self.include_subdirs)
             current_note_paths = {str(p) for p in current_notes}
             loading_screen.update_status(f"Found {len(current_notes)} notes...")
             loading_screen.update_progress(70)
@@ -1074,11 +1075,17 @@ class SearchApp(App):
             action="store_true",
             help="Force rebuild the search cache from scratch",
         )
+        parser.add_argument(
+            "--include-subdirs",
+            help="Comma-separated list of subdirectories to include (relative to notes_dir)",
+        )
         try:
             return parser.parse_args()
         except SystemExit:
             # During testing, pytest may pass unknown arguments, so return defaults
-            return argparse.Namespace(notes_dir="test_data", rebuild_cache=False)
+            return argparse.Namespace(
+                notes_dir="test_data", rebuild_cache=False, include_subdirs=None
+            )
 
     def update_mode_button(self) -> None:
         """Update mode button text based on current mode."""
