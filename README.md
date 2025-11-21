@@ -56,6 +56,9 @@ MIT License - feel free to use, modify, and distribute.
 - [x] cmd line option to only include specific subdirectories
 - [x] wikilink suggestion: implement a button and shortcut to apply suggestion. shortcut: "ctrl+enter". button: "apply selected suggestion", located in the same section as the progress bar
 - [x] wikilink suggestions: split into new lines. `0.714  test1.md (Machine learning)\n   -> ml_notes.md (Machine Learning Notes)`
+- [x] scan progress section should be more compact - all in one line. scan progress bar, status, and the button.
+- [x] there's still no wikilink suggestions caching
+- [x] wikilink suggestions: the app currently removes existing wikilinks before applying, but i want it to take in account of that during the candicate splitting phase
 
 ### skip for now
 - [ ] type errors in ai.py
