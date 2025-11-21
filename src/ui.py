@@ -839,20 +839,16 @@ class SearchApp(App):
         rel_path = str(path).replace(str(Path.home()), "~")
         title = self.get_note_title(content, str(path))
 
-        # Process wikilinks for display
-        processed_content = self.process_wikilinks_for_display(content)
-
-        # Combine header and processed content
+        # Combine header and content (keep wikilinks for highlighting)
         header = f"{title}\n{rel_path}\n"
         header += f"Score: {score:.4f}\n\n"
-        full_content = header + content  # Keep original for highlighting
-        full_processed_content = header + processed_content
+        full_content = header + content
 
         preview_area.clear()
-        preview_area.load_text(full_processed_content)
+        preview_area.load_text(full_content)
 
         # Add wikilink highlights
-        self.add_wikilink_highlights(preview_area, full_content, full_processed_content)
+        self.add_wikilink_highlights(preview_area, full_content, full_content)
 
         preview_area.scroll_home()
 
