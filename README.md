@@ -53,11 +53,10 @@ MIT License - feel free to use, modify, and distribute.
 - [x] wikilink suggestions: markdown lists starts with `- `, don't include them. no `- anki`, just `anki`
 - [x] wikilink suggestions: wikilinks cannot contain newlines. take that into account when splitting candidates.
 - [x] performance isues with wikilink suggestions page with >10000 suggestions
-- [ ] cmd line option to only include specific subdirectories
+- [x] cmd line option to only include specific subdirectories
+- [ ] wikilink suggestion: implement a button and shortcut to apply suggestion. shortcut: "ctrl+enter". button: "apply selected suggestion", located in the same section as the progress bar
+- [ ] wikilink suggestions: split into new lines. `0.714  test1.md (Machine learning)\n   -> ml_notes.md (Machine Learning Notes)`
 
 ### skip for now
 - [ ] type errors in ai.py
 - [ ] ui elements isn't aligned (def not something an llm agent can fix)
-- [ ] wikilink suggestion: implement a button and shortcut to apply suggestion. shortcut: "ctrl+enter". button: "apply selected suggestion", located in the same section as the progress bar
-- [ ] split into new line
-0.714  test1.md (Machine learning) -> ml_notes.md (Machine Learning Notes)

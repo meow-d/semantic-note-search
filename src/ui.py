@@ -133,6 +133,10 @@ class SearchScreen(Screen):
 
 
 class AnalyzeScreen(Screen):
+    BINDINGS = [
+        Binding("ctrl+enter", "apply_suggestion", "Apply selected suggestion"),
+    ]
+
     def compose(self) -> ComposeResult:
         with Vertical(classes="main-container"):
             with Horizontal(classes="top-bar"):
@@ -144,6 +148,11 @@ class AnalyzeScreen(Screen):
                     yield Label("Scan Progress", id="progress-label")
                     yield ProgressBar(id="analyze-progress", total=100)
                     yield Label("Ready to scan...", id="progress-status")
+                    yield Button(
+                        "Apply Selected Suggestion",
+                        id="apply-suggestion-btn",
+                        disabled=True,
+                    )
 
                 with Horizontal(classes="analyze-main-content"):
                     with Vertical(classes="analyze-suggestions-panel"):
@@ -173,6 +182,38 @@ class AnalyzeScreen(Screen):
 
         if event.button.id == "mode-btn":
             app.call_later(app.toggle_app_mode)
+        elif event.button.id == "apply-suggestion-btn":
+            self.apply_selected_suggestion()
+
+    def apply_selected_suggestion(self) -> None:
+        app = cast(SearchApp, self.app)
+        if not app.all_analysis_suggestions or app.selected_suggestion_index >= len(
+            app.all_analysis_suggestions
+        ):
+            return
+
+        suggestion = app.all_analysis_suggestions[app.selected_suggestion_index]
+        source_path = suggestion["source_note_path"]
+
+        # Get the modified content from the source area
+        source_area = self.query_one("#analyze-source", TextArea)
+        modified_content = source_area.text
+
+        # Write to file
+        try:
+            with open(source_path, "w", encoding="utf-8") as f:
+                f.write(modified_content)
+            # Update status
+            self.query_one("#progress-status", Label).update(
+                "Suggestion applied successfully!"
+            )
+        except Exception as e:
+            self.query_one("#progress-status", Label).update(
+                f"Error applying suggestion: {e}"
+            )
+
+    def action_apply_suggestion(self) -> None:
+        self.apply_selected_suggestion()
 
     def update_progress(self, percentage: int, status: str):
         try:
@@ -219,13 +260,23 @@ class AnalyzeScreen(Screen):
 
                 if is_selected:
                     results_log.write(
-                        f"[bold #f5dede on #5d2828]{score:.3f}  {source_note} ({candidate}) -> {suggestion['filename']} ({target_title})[/]"
+                        f"[bold #f5dede on #5d2828]{score:.3f}  {source_note} ({candidate})[/]"
+                    )
+                    results_log.write(
+                        f"[bold #f5dede on #5d2828]   -> {suggestion['filename']} ({target_title})[/]"
                     )
                 else:
                     results_log.write(
-                        f"[#cd5c5c]{score:.3f}  {source_note} ({candidate}) -> {suggestion['filename']} ({target_title})"
+                        f"[#cd5c5c]{score:.3f}  {source_note} ({candidate})"
+                    )
+                    results_log.write(
+                        f"[#cd5c5c]   -> {suggestion['filename']} ({target_title})"
                     )
                 results_log.write("")
+
+            # Update apply button
+            btn = self.query_one("#apply-suggestion-btn", Button)
+            btn.disabled = len(app.all_analysis_suggestions) == 0
 
         except Exception as e:
             print(f"Error displaying all analysis results: {e}")
