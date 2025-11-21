@@ -42,13 +42,16 @@ MIT License - feel free to use, modify, and distribute.
 - [x] in the wikilink previews, top right, wikilinks are not applied. right now it's "This is a test note about artificial intelligence and machine learning.". it should be "This is a test note about [[ml_notes|artificial intelligence]] and machine learning."
 - [x] look into textual tui documentation on how to make text inside textarea highlighted. then, highllight the wikilink previews, everything between [[]]
 
-- [ ] separate the textual css in separate .tcss file
-- [ ] search ui should parse the results for the first h1 to use as title
-- [ ] search ui removed [[ and ]] in wikilinks and highlights it. i only need the highlight, not removal
-- [ ] remove test mode entirely
-- [ ] update tests
+- [x] separate the textual css in separate .tcss file
+- [x] search ui should parse the results for the first h1 to use as title
+- [x] search ui removed [[ and ]] in wikilinks and highlights it. i only need the highlight, not removal
+- [x] remove test mode entirely
+- [x] update tests
+- [x] refactor: look through the codebase for any unfinished code or errors, finish or remove unused code
+- [x] are wikilink suggestions cached? if not, implement that feature
 
 ### skip for now
 - [ ] type errors in ai.py
 - [ ] ui elements isn't aligned (def not something an llm agent can fix)
+- [ ] wikilink suggestion: implement a button and shortcut to apply suggestion. shortcut: "ctrl+enter". button: "apply selected suggestion", located in the same section as the progress bar
 
