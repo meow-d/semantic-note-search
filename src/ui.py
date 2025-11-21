@@ -685,6 +685,7 @@ class SearchApp(App):
     def write_results_list(self, log):
         for i, (score, path, content) in enumerate(self.current_results):
             rel_path = str(path).replace(str(Path.home()), "~")
+            title = self.get_note_title(content, str(path))
             preview = content.replace("\n", " ").strip()[:100]
             if len(content) > 100:
                 preview += "..."
@@ -692,12 +693,10 @@ class SearchApp(App):
             is_low_relevance = score < self.SCORE_THRESHOLD
 
             if i == self.selected_index:
-                self.write_selected_result(
-                    log, score, rel_path, preview, is_low_relevance
-                )
+                self.write_selected_result(log, score, title, preview, is_low_relevance)
             else:
                 self.write_unselected_result(
-                    log, score, rel_path, preview, is_low_relevance
+                    log, score, title, preview, is_low_relevance
                 )
 
     def write_analysis_info(self, log, query):
@@ -838,12 +837,13 @@ class SearchApp(App):
         """Display preview for search mode."""
         score, path, content = self.current_results[index]
         rel_path = str(path).replace(str(Path.home()), "~")
+        title = self.get_note_title(content, str(path))
 
         # Process wikilinks for display
         processed_content = self.process_wikilinks_for_display(content)
 
         # Combine header and processed content
-        header = f"{rel_path}\n"
+        header = f"{title}\n{rel_path}\n"
         header += f"Score: {score:.4f}\n\n"
         full_content = header + content  # Keep original for highlighting
         full_processed_content = header + processed_content
