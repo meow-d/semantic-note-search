@@ -14,8 +14,12 @@ from sentence_transformers import SentenceTransformer, util
 import spacy
 
 from config import (
-    MODEL_NAME, QUERY_INSTRUCTION, SCORE_THRESHOLD, WIKILINK_SCORE_THRESHOLD,
-    MAX_RESULTS, get_cache_file
+    MODEL_NAME,
+    QUERY_INSTRUCTION,
+    SCORE_THRESHOLD,
+    WIKILINK_SCORE_THRESHOLD,
+    MAX_RESULTS,
+    get_cache_file,
 )
 
 
@@ -26,56 +30,63 @@ cache: Optional[Dict[str, Tuple[str, torch.Tensor]]] = None
 def get_gpu_status() -> Dict[str, Any]:
     """Check GPU availability and return status info."""
     status_info = {
-        'available': False,
-        'version': torch.__version__,
-        'cuda_version': torch.version.cuda,
-        'device_count': 0,
-        'device_name': None,
-        'device': "cpu"
+        "available": False,
+        "version": torch.__version__,
+        "cuda_version": torch.version.cuda,
+        "device_count": 0,
+        "device_name": None,
+        "device": "cpu",
     }
-    
+
     try:
         # Check if CUDA is available
         if torch.cuda.is_available():
-            status_info['available'] = True
-            status_info['device_count'] = torch.cuda.device_count()
-            status_info['device_name'] = torch.cuda.get_device_name(0) if status_info['device_count'] > 0 else None
-            status_info['device'] = "cuda"
+            status_info["available"] = True
+            status_info["device_count"] = torch.cuda.device_count()
+            status_info["device_name"] = (
+                torch.cuda.get_device_name(0)
+                if status_info["device_count"] > 0
+                else None
+            )
+            status_info["device"] = "cuda"
         else:
             # Check for other backends like MPS (Apple Silicon) or DirectML
-            if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-                status_info['available'] = True
-                status_info['device'] = "mps"
-                status_info['device_name'] = "Apple Silicon GPU"
-            elif hasattr(torch.backends, 'opencl') and torch.backends.opencl.is_available():
-                status_info['available'] = True
-                status_info['device'] = "opencl"
-                status_info['device_name'] = "OpenCL GPU"
+            if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                status_info["available"] = True
+                status_info["device"] = "mps"
+                status_info["device_name"] = "Apple Silicon GPU"
+            elif (
+                hasattr(torch.backends, "opencl")
+                and torch.backends.opencl.is_available()
+            ):
+                status_info["available"] = True
+                status_info["device"] = "opencl"
+                status_info["device_name"] = "OpenCL GPU"
     except Exception:
         # If any error occurs during detection, fall back to CPU
         pass
-    
+
     return status_info
 
 
 def load_model() -> Optional[SentenceTransformer]:
     """Load the sentence transformer model."""
     global model
-    
+
     # Get GPU status and determine best device
     gpu_status = get_gpu_status()
-    
-    if gpu_status['available']:
-        device = gpu_status['device']
+
+    if gpu_status["available"]:
+        device = gpu_status["device"]
         print(f"Using {device} for model encoding ({gpu_status['device_name']})")
-        
+
         # For CUDA, set the device to the first available GPU
-        if device == "cuda" and gpu_status['device_count'] > 0:
+        if device == "cuda" and gpu_status["device_count"] > 0:
             torch.cuda.set_device(0)
     else:
         device = "cpu"
         print("Using CPU for model encoding (no GPU detected)")
-    
+
     try:
         model = SentenceTransformer(MODEL_NAME, trust_remote_code=True, device=device)
         return model
@@ -98,7 +109,12 @@ def get_all_notes(directory: Path) -> List[Path]:
     return notes
 
 
-async def build_cache(notes: List[Path], model: SentenceTransformer, cache_file: Path, progress_callback: Optional[Any] = None) -> Dict[str, Tuple[str, torch.Tensor]]:
+async def build_cache(
+    notes: List[Path],
+    model: SentenceTransformer,
+    cache_file: Path,
+    progress_callback: Optional[Any] = None,
+) -> Dict[str, Tuple[str, torch.Tensor]]:
     """Build the search cache for notes."""
     global cache
     cache = {}
@@ -109,7 +125,11 @@ async def build_cache(notes: List[Path], model: SentenceTransformer, cache_file:
             with open(note_path, "r", encoding="utf-8") as f:
                 content = f.read()
             if content.strip():
-                embedding = model.encode(QUERY_INSTRUCTION + content, convert_to_tensor=True, device=next(model.parameters()).device)
+                embedding = model.encode(
+                    QUERY_INSTRUCTION + content,
+                    convert_to_tensor=True,
+                    device=next(model.parameters()).device,
+                )
                 cache[str(note_path)] = (content, embedding)
         except Exception:
             # Skip problematic notes but continue processing
@@ -126,8 +146,11 @@ async def build_cache(notes: List[Path], model: SentenceTransformer, cache_file:
     # Move tensors to CPU before saving (CUDA tensors can't be pickled)
     cpu_cache = {}
     for path, (content, embedding) in cache.items():
-        cpu_cache[path] = (content, embedding.cpu() if hasattr(embedding, 'cpu') else embedding)
-    
+        cpu_cache[path] = (
+            content,
+            embedding.cpu() if hasattr(embedding, "cpu") else embedding,
+        )
+
     with open(cache_file, "wb") as f:
         pickle.dump(cpu_cache, f)
     return cache
@@ -144,7 +167,12 @@ def load_cache(cache_file: Path) -> Dict[str, Tuple[str, torch.Tensor]]:
         return {}
 
 
-async def update_cache_for_new_notes(model: SentenceTransformer, existing_cache: Dict[str, Tuple[str, torch.Tensor]], new_notes: Set[str], progress_callback: Optional[Any] = None) -> Dict[str, Tuple[str, torch.Tensor]]:
+async def update_cache_for_new_notes(
+    model: SentenceTransformer,
+    existing_cache: Dict[str, Tuple[str, torch.Tensor]],
+    new_notes: Set[str],
+    progress_callback: Optional[Any] = None,
+) -> Dict[str, Tuple[str, torch.Tensor]]:
     """Update cache with new notes."""
     global cache
     total = len(new_notes)
@@ -153,7 +181,11 @@ async def update_cache_for_new_notes(model: SentenceTransformer, existing_cache:
             with open(note_path, "r", encoding="utf-8") as f:
                 content = f.read()
             if content.strip():
-                embedding = model.encode(QUERY_INSTRUCTION + content, convert_to_tensor=True, device=next(model.parameters()).device)
+                embedding = model.encode(
+                    QUERY_INSTRUCTION + content,
+                    convert_to_tensor=True,
+                    device=next(model.parameters()).device,
+                )
                 cache[str(note_path)] = (content, embedding)
                 existing_cache[str(note_path)] = (content, embedding)
         except Exception:
@@ -167,7 +199,9 @@ async def update_cache_for_new_notes(model: SentenceTransformer, existing_cache:
     return existing_cache
 
 
-def remove_deleted_notes_from_cache(existing_cache: Dict[str, Tuple[str, torch.Tensor]], removed_notes: Set[str]) -> Dict[str, Tuple[str, torch.Tensor]]:
+def remove_deleted_notes_from_cache(
+    existing_cache: Dict[str, Tuple[str, torch.Tensor]], removed_notes: Set[str]
+) -> Dict[str, Tuple[str, torch.Tensor]]:
     """Remove deleted notes from cache."""
     global cache
     for path in removed_notes:
@@ -176,7 +210,14 @@ def remove_deleted_notes_from_cache(existing_cache: Dict[str, Tuple[str, torch.T
     return existing_cache
 
 
-async def load_or_build_cache(model: Optional[SentenceTransformer], current_note_paths: Set[str], notes_dir: Path, force_rebuild: bool = False, build_func: Optional[Any] = None, progress_callback: Optional[Any] = None) -> Tuple[Dict[str, Tuple[str, torch.Tensor]], str]:
+async def load_or_build_cache(
+    model: Optional[SentenceTransformer],
+    current_note_paths: Set[str],
+    notes_dir: Path,
+    force_rebuild: bool = False,
+    build_func: Optional[Any] = None,
+    progress_callback: Optional[Any] = None,
+) -> Tuple[Dict[str, Tuple[str, torch.Tensor]], str]:
     """Load or build cache and return status information."""
     global cache
     if build_func is None:
@@ -188,13 +229,13 @@ async def load_or_build_cache(model: Optional[SentenceTransformer], current_note
             cache_file.unlink()
 
     cache = load_cache(cache_file)
-    
+
     # Move tensors to correct device after loading
     if cache and model:
         try:
             device = next(model.parameters()).device
             for path, (content, embedding) in cache.items():
-                if hasattr(embedding, 'to'):
+                if hasattr(embedding, "to"):
                     cache[path] = (content, embedding.to(device))
         except Exception:
             # If device placement fails, keep tensors on CPU
@@ -219,7 +260,9 @@ async def load_or_build_cache(model: Optional[SentenceTransformer], current_note
             status_parts.append("reindexed")
         else:
             if new_notes:
-                cache = await update_cache_for_new_notes(model, cache, new_notes, progress_callback)
+                cache = await update_cache_for_new_notes(
+                    model, cache, new_notes, progress_callback
+                )
                 status_parts.append(f"added {len(new_notes)} new notes")
 
             if removed_notes:
@@ -229,8 +272,11 @@ async def load_or_build_cache(model: Optional[SentenceTransformer], current_note
         # Move tensors to CPU before saving (CUDA tensors can't be pickled)
         cpu_cache = {}
         for path, (content, embedding) in cache.items():
-            cpu_cache[path] = (content, embedding.cpu() if hasattr(embedding, 'cpu') else embedding)
-        
+            cpu_cache[path] = (
+                content,
+                embedding.cpu() if hasattr(embedding, "cpu") else embedding,
+            )
+
         try:
             with open(cache_file, "wb") as f:
                 pickle.dump(cpu_cache, f)
@@ -256,6 +302,7 @@ def load_spacy_model() -> Optional[Any]:
         print("spaCy English model not found. Attempting to download...")
         try:
             from spacy.cli import download
+
             download("en_core_web_sm")
             print("✓ spaCy model downloaded successfully")
             # Now try loading again
@@ -298,13 +345,54 @@ def extract_verb_phrases(text: str, nlp: Optional[Any]) -> List[str]:
     try:
         doc = nlp(text)
         verb_phrases = []
-        trivial_verbs = {"is", "are", "was", "were", "be", "been", "being",
-                        "do", "does", "did", "have", "has", "had", "will",
-                        "would", "can", "could", "should", "may", "might",
-                        "must", "shall", "get", "gets", "got", "go", "goes",
-                        "went", "come", "comes", "came", "make", "makes",
-                        "made", "take", "takes", "took", "give", "gives",
-                        "gave", "see", "sees", "saw", "know", "knows", "knew"}
+        trivial_verbs = {
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "do",
+            "does",
+            "did",
+            "have",
+            "has",
+            "had",
+            "will",
+            "would",
+            "can",
+            "could",
+            "should",
+            "may",
+            "might",
+            "must",
+            "shall",
+            "get",
+            "gets",
+            "got",
+            "go",
+            "goes",
+            "went",
+            "come",
+            "comes",
+            "came",
+            "make",
+            "makes",
+            "made",
+            "take",
+            "takes",
+            "took",
+            "give",
+            "gives",
+            "gave",
+            "see",
+            "sees",
+            "saw",
+            "know",
+            "knows",
+            "knew",
+        }
 
         for token in doc:
             if token.pos_ == "VERB" and token.text.lower() not in trivial_verbs:
@@ -327,7 +415,9 @@ def extract_verb_phrases(text: str, nlp: Optional[Any]) -> List[str]:
         return []
 
 
-def combine_and_deduplicate_candidates(noun_phrases: List[str], verb_phrases: List[str]) -> List[str]:
+def combine_and_deduplicate_candidates(
+    noun_phrases: List[str], verb_phrases: List[str]
+) -> List[str]:
     """Combine noun and verb phrases and remove duplicates."""
     all_candidates = noun_phrases + verb_phrases
 
@@ -346,34 +436,48 @@ def combine_and_deduplicate_candidates(noun_phrases: List[str], verb_phrases: Li
 
 def filter_text_for_candidates(text: str) -> str:
     """Filter text to exclude headings, yaml frontmatter, and existing wikilinks."""
-    lines = text.split('\n')
+    lines = text.split("\n")
     filtered_lines = []
     in_yaml = False
 
     for line in lines:
         # Skip yaml frontmatter
-        if line.strip() == '---':
+        if line.strip() == "---":
             in_yaml = not in_yaml
             continue
         if in_yaml:
             continue
 
         # Skip headings (lines starting with #)
-        if line.strip().startswith('#'):
+        if line.strip().startswith("#"):
             continue
 
-        # Remove existing wikilinks from the line
+        # Skip markdown list items (lines starting with - )
+        if line.strip().startswith("- "):
+            continue
+
+        # Remove URLs from the line
         import re
-        line = re.sub(r'\[\[[^\]]*\]\]', '', line)
+
+        line = re.sub(r"https?://\S+", "", line)
+
+        # Remove existing wikilinks from the line
+        line = re.sub(r"\[\[[^\]]*\]\]", "", line)
 
         # Only add non-empty lines
         if line.strip():
             filtered_lines.append(line)
 
-    return '\n'.join(filtered_lines)
+    return "\n".join(filtered_lines)
 
 
-def analyze_text_for_wikilinks(text: str, model: SentenceTransformer|None, cache: Dict[str, Tuple[str, torch.Tensor]], nlp: Optional[Any] = None, source_note_path: Optional[str] = None) -> List[Dict[str, Any]]:
+def analyze_text_for_wikilinks(
+    text: str,
+    model: SentenceTransformer | None,
+    cache: Dict[str, Tuple[str, torch.Tensor]],
+    nlp: Optional[Any] = None,
+    source_note_path: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     """Analyze text for wikilink candidates and return suggestions."""
     if model is None:
         raise Exception("no model")
@@ -391,11 +495,11 @@ def analyze_text_for_wikilinks(text: str, model: SentenceTransformer|None, cache
     if not candidates:
         return []
 
-
-
     try:
         # Embed all candidates
-        candidate_embeddings = model.encode(candidates, convert_to_tensor=True, device=next(model.parameters()).device)
+        candidate_embeddings = model.encode(
+            candidates, convert_to_tensor=True, device=next(model.parameters()).device
+        )
         note_paths = list(cache.keys())
         note_embeddings_list = [data[1] for data in cache.values()]
         note_embeddings_tensor = torch.stack(note_embeddings_list)
@@ -417,23 +521,27 @@ def analyze_text_for_wikilinks(text: str, model: SentenceTransformer|None, cache
                 best_note_content = cache[best_note_path][0]
 
                 # Prevent self-linking: skip if target is the same as source
-                if source_note_path and Path(best_note_path).name == Path(source_note_path).name:
+                if (
+                    source_note_path
+                    and Path(best_note_path).name == Path(source_note_path).name
+                ):
                     continue
 
                 # Format as wikilink suggestion
                 filename = Path(best_note_path).name
                 wikilink_suggestion = {
-                    'candidate': candidate,
-                    'filename': filename,
-                    'score': best_score,
-                    'wikilink': f"[[{filename}|{candidate}]]",
-                    'note_content': best_note_content[:200] + "..." if len(best_note_content) > 200 else best_note_content
+                    "candidate": candidate,
+                    "filename": filename,
+                    "score": best_score,
+                    "wikilink": f"[[{filename}|{candidate}]]",
+                    "note_content": best_note_content[:200] + "..."
+                    if len(best_note_content) > 200
+                    else best_note_content,
                 }
                 wikilink_suggestions.append(wikilink_suggestion)
 
         # Sort by similarity score
-        wikilink_suggestions.sort(key=lambda x: x['score'], reverse=True)
-
+        wikilink_suggestions.sort(key=lambda x: x["score"], reverse=True)
 
         return wikilink_suggestions
 
@@ -441,14 +549,24 @@ def analyze_text_for_wikilinks(text: str, model: SentenceTransformer|None, cache
         return []
 
 
-def search(query: str, model: SentenceTransformer|None, cache: Dict[str, Tuple[str, torch.Tensor]], score_threshold: float = SCORE_THRESHOLD, max_results: int = MAX_RESULTS) -> List[Tuple[float, str, str]]:
+def search(
+    query: str,
+    model: SentenceTransformer | None,
+    cache: Dict[str, Tuple[str, torch.Tensor]],
+    score_threshold: float = SCORE_THRESHOLD,
+    max_results: int = MAX_RESULTS,
+) -> List[Tuple[float, str, str]]:
     """Search for notes matching the query."""
     if model is None:
         raise Exception("no model")
     if not query.strip():
         return []
 
-    query_embedding = model.encode(QUERY_INSTRUCTION + query, convert_to_tensor=True, device=next(model.parameters()).device)
+    query_embedding = model.encode(
+        QUERY_INSTRUCTION + query,
+        convert_to_tensor=True,
+        device=next(model.parameters()).device,
+    )
 
     note_paths = list(cache.keys())
     note_embeddings_list = [data[1] for data in cache.values()]

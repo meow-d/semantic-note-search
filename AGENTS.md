@@ -1,5 +1,5 @@
 # Agent Guidelines for Semantic Note Search
-1. Look at the README.md TODOs for your list of current tasks. do not touch the readme TODOs except for ticking the checkmarks.
+1. Look at the README.md TODOs for your list of current tasks. do not touch the readme TODOs except for ticking the checkmarks. tasks in the "skip for now" section should be skipped, do NOT touch those either.
 2. select a task to do. for complex tasks, break them down into subtasks. rule of thumb: ensure the app is always in a working state at all times. do NOT pull or push, you must only use git status, add, and commit.
 3. make sure all tests pass and everything is working
 4. make a git commit

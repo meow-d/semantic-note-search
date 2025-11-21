@@ -51,7 +51,9 @@ MIT License - feel free to use, modify, and distribute.
 - [x] are wikilink suggestions cached? if not, implement that feature
 - [ ] wikilink suggestions: skip urls (https://), existing wikilinks, and headings (line starts with #)
 - [ ] wikilink suggestions: markdown lists starts with `- `, don't include them. no `- anki`, just `anki`
+- [ ] wikilink suggestions: wikilinks cannot contain newlines. take that into account when splitting candidates.
 - [ ] performance isues with wikilink suggestions page with >10000 suggestions
+- [ ] cmd line option to only include specific subdirectories
 
 ### skip for now
 - [ ] type errors in ai.py

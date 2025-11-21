@@ -424,7 +424,7 @@ class SearchApp(App):
 
     async def initialize_app_async(self) -> None:
         if self.test_mode:
-            self.show_main_interface()
+            await self.show_main_interface()
             return
 
         global model, cache
@@ -499,7 +499,7 @@ class SearchApp(App):
             loading_screen.update_status("Starting application...")
             loading_screen.update_progress(100)
             await self.force_ui_update()
-            self.show_main_interface()
+            await self.show_main_interface()
 
         except Exception as e:
             loading_screen.update_progress(0)
@@ -508,35 +508,39 @@ class SearchApp(App):
     async def force_ui_update(self) -> None:
         await asyncio.sleep(0.01)
 
-    def show_main_interface(self) -> None:
+    async def show_main_interface(self) -> None:
         self.loading = False
         self.switch_screen("search")
+        await self.force_ui_update()
         self.initialize_search_screen()
         self.update_mode_button()
 
     def initialize_search_screen(self) -> None:
         search_screen = cast(SearchScreen, self.screen)
-        results_log = search_screen.query_one("#results", RichLog)
-        results_log.clear()
+        try:
+            results_log = search_screen.query_one("#results", RichLog)
+            results_log.clear()
 
-        cache_size = len(cache) if cache else 0
+            cache_size = len(cache) if cache else 0
 
-        if cache and len(cache) > 0:
-            results_log.write(
-                f"[bold #cd5c5c]Ready![/bold #cd5c5c] {len(cache)} notes indexed"
-            )
-            results_log.write("")
-            results_log.write(
-                f"[dim]Showing up to {self.MAX_RESULTS} results with score ≥ {self.SCORE_THRESHOLD}[/dim]"
-            )
-            results_log.write("[dim]Use ↑↓ arrows to navigate results[/dim]")
-            results_log.write("[dim]Press ctrl+q to quit[/dim]")
-        else:
-            results_log.write("[bold #ff6b6b]No notes found![/bold #ff6b6b]")
-            results_log.write("")
-            results_log.write(
-                "[dim]Make sure you have notes in your notes directory[/dim]"
-            )
+            if cache and len(cache) > 0:
+                results_log.write(
+                    f"[bold #cd5c5c]Ready![/bold #cd5c5c] {len(cache)} notes indexed"
+                )
+                results_log.write("")
+                results_log.write(
+                    f"[dim]Showing up to {self.MAX_RESULTS} results with score ≥ {self.SCORE_THRESHOLD}[/dim]"
+                )
+                results_log.write("[dim]Use ↑↓ arrows to navigate results[/dim]")
+                results_log.write("[dim]Press ctrl+q to quit[/dim]")
+            else:
+                results_log.write("[bold #ff6b6b]No notes found![/bold #ff6b6b]")
+                results_log.write("")
+                results_log.write(
+                    "[dim]Make sure you have notes in your notes directory[/dim]"
+                )
+        except:
+            pass
 
     def on_button_pressed(self, event) -> None:
         if self.loading:
@@ -946,6 +950,9 @@ class SearchApp(App):
                 await asyncio.sleep(0.01)
 
             all_suggestions.sort(key=lambda x: x["score"], reverse=True)
+
+            # Limit to top 1000 suggestions for performance
+            all_suggestions = all_suggestions[:1000]
 
             self.suggestions_cache = all_suggestions
             self.all_analysis_suggestions = all_suggestions

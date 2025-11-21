@@ -97,8 +97,8 @@ class TestUITextualIntegration:
         app.test_mode = True
 
         async with app.run_test() as pilot:
+            pilot.app.switch_screen("search")
             await pilot.pause()
-            await pilot.pause()  # Extra pause to ensure screen switch
 
             # Should be on search screen
             assert isinstance(pilot.app.screen, SearchScreen)
