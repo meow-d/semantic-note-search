@@ -407,6 +407,7 @@ class SearchApp(App):
         self._search_timer = None
         self.app_mode = MODE_SEARCH
         self.all_analysis_suggestions = []
+        self.suggestions_cache = None
         self.test_mode = False
         self._notes_dir: Path | None = None
 
@@ -897,6 +898,15 @@ class SearchApp(App):
         if not cache or self.loading:
             return
 
+        if self.suggestions_cache is not None:
+            self.all_analysis_suggestions = self.suggestions_cache
+            self.selected_suggestion_index = 0
+            analyze_screen = cast(AnalyzeScreen, self.screen)
+            analyze_screen.display_all_analysis_results()
+            if self.suggestions_cache:
+                analyze_screen.display_analysis_preview(0)
+            return
+
         try:
             analyze_screen = cast(AnalyzeScreen, self.screen)
 
@@ -937,6 +947,7 @@ class SearchApp(App):
 
             all_suggestions.sort(key=lambda x: x["score"], reverse=True)
 
+            self.suggestions_cache = all_suggestions
             self.all_analysis_suggestions = all_suggestions
             self.selected_suggestion_index = 0
 
