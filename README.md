@@ -26,7 +26,7 @@ pip install -r requirements.txt
 python main.py /path/to/your/notes
 ```
 
-First run will take a while as it'll need to download the sentence transformer model and build a search index.
+First run will take a while as it'll need to download the sentence transformer model and build a search index. Subsequent runs might also take a while depending on the dataset size.
 
 ## Requirements
 - Python 3.8+
@@ -42,9 +42,13 @@ MIT License - feel free to use, modify, and distribute.
 - [x] in the wikilink previews, top right, wikilinks are not applied. right now it's "This is a test note about artificial intelligence and machine learning.". it should be "This is a test note about [[ml_notes|artificial intelligence]] and machine learning."
 - [x] look into textual tui documentation on how to make text inside textarea highlighted. then, highllight the wikilink previews, everything between [[]]
 
-### skip for now
-- [ ] type errors in ai.py
-- [ ] separate the textual css in separate file
+- [ ] separate the textual css in separate .tcss file
+- [ ] search ui should parse the results for the first h1 to use as title
+- [ ] search ui removed [[ and ]] in wikilinks and highlights it. i only need the highlight, not removal
 - [ ] remove test mode entirely
 - [ ] update tests
+
+### skip for now
+- [ ] type errors in ai.py
+- [ ] ui elements isn't aligned (def not something an llm agent can fix)
 
