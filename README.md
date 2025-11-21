@@ -49,6 +49,9 @@ MIT License - feel free to use, modify, and distribute.
 - [x] update tests
 - [x] refactor: look through the codebase for any unfinished code or errors, finish or remove unused code
 - [x] are wikilink suggestions cached? if not, implement that feature
+- [ ] wikilink suggestions: skip urls (https://), existing wikilinks, and headings (line starts with #)
+- [ ] wikilink suggestions: markdown lists starts with `- `, don't include them. no `- anki`, just `anki`
+- [ ] performance isues with wikilink suggestions page with >10000 suggestions
 
 ### skip for now
 - [ ] type errors in ai.py
