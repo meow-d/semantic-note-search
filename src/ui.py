@@ -306,10 +306,15 @@ class AnalyzeScreen(Screen):
             # Insert the suggested wikilink into the source content
             wikilink = suggestion["wikilink"]
             candidate = suggestion["candidate"]
-            # Replace the first occurrence of the candidate with the wikilink syntax
-            modified_source_content = full_source_content.replace(
-                candidate, wikilink, 1
-            )
+            # Replace the first occurrence of the candidate with the wikilink syntax, but not inside existing wikilinks
+            import re
+
+            parts = re.split(r"(\[\[[^\]]*\]\])", full_source_content)
+            for i in range(len(parts)):
+                if not parts[i].startswith("[["):
+                    parts[i] = parts[i].replace(candidate, wikilink, 1)
+                    break
+            modified_source_content = "".join(parts)
 
             # For preview, show the raw [[ ]] syntax without processing existing wikilinks
             source_area.load_text(modified_source_content)
